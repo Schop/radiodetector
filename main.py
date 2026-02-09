@@ -284,8 +284,7 @@ def main():
                             
                             # Print with red warning and timestamp
                             ts = get_timestamp()
-                            print(f"{Fore.RED}{Style.BRIGHT}[{ts}] ✓ {normalized_artist} - {normalized_song} ({station}){Style.RESET_ALL}")
-
+                            print(f"{Fore.RED}{Style.BRIGHT}[{ts}] [{station}]{normalized_artist} - {normalized_song} {Style.RESET_ALL}")
             
             # Wait 60 seconds before next check
             time.sleep(60)
