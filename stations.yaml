@@ -1,0 +1,69 @@
+# Radio Station Configuration
+# Comment out stations with # to disable them
+
+relisten:
+  SLAM!: slam
+  538: 538
+  NPO 3FM: 3fm
+  Q-music: qmusic
+  100% NL: 100p
+  Sky Radio: skyradio
+  Radio Veronica: veronica
+  Radio 10: radio10
+  Juize: juize
+  FunX: funx
+  Arrow Caz: caz
+  Arrow Classic Rock: arrow
+  RadioNL: radionl
+  Simone FM: simonefm
+  NPO Radio 1: radio1
+  Sublime FM: sublimefm
+  Radio Decibel: decibel
+  NPO Radio 2: radio2
+  # Note: Homepage rotates ~19 stations at a time
+
+myonlineradio:
+  100% NL: 100procent-nl
+  Arrow Classic Rock: arrow-classic-rock
+  JOE: joe
+  KINK: kink
+  NPO 3FM: npo-3fm
+  NPO Radio 1: npo-radio-1
+  NPO Radio 2: npo-radio-2
+  NPO Radio 5: npo-radio-5
+  Q Music: q-music
+  Radio 10: radio-10
+  Radio 538: radio-538
+  RadioNL: radionl
+  Sky Radio: sky-radio
+  SLAM!: slam
+  Sublime: sublime
+  Veronica: veronica
+  All Time Hits: all-time-hits
+  KISS FM: kiss-fm
+  Simone FM: simone-fm
+  We Are The Beat: we-are-the-beat
+  
+priority_stations:
+  - 100% NL
+  - Arrow Classic Rock
+  - Decibel
+  - FunX
+  - JOE
+  - KINK
+  - NPO 3FM
+  - NPO Radio 1
+  - NPO Radio 2
+  - NPO Radio 5
+  - Q Music
+  - Q Music Foute UUR
+  - Q Music Non Stop
+  - Radio 10
+  - Radio 538
+  - RadioNL
+  - Sky Radio
+  - SLAM!
+  - Sublime
+  - Veronica
+  - Simone FM
+  - Joy Radio

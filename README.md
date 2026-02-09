@@ -4,35 +4,46 @@ A Python script that monitors Dutch radio stations for songs by target artists (
 
 ## Features
 
-- **Real-time monitoring** of 19 Dutch radio stations via [relisten.nl](https://www.relisten.nl) aggregator
+- **Real-time monitoring** of 40 Dutch radio stations via [relisten.nl](https://www.relisten.nl) (primary) or 99 stations via [myonlineradio.nl](https://myonlineradio.nl) (fallback)
+- **Automatic fallback** - Switches to myonlineradio.nl when relisten.nl is unavailable
+- **Configurable stations** - Easy-to-edit JSON file for station mappings
 - **Target artist detection** with red terminal alerts when Phil Collins or Genesis songs are played
 - **SQLite database** logging all detected target artist songs with timestamps
 - **Pi Zero compatible** - No Selenium/Chromium, just pure Python libraries
 - **Efficient** - Fetches all stations in ~100-200ms per cycle
 
+## Configuration
+
+### Station Mappings
+
+Station configurations are stored in [`stations.yaml`](stations.yaml):
+
+```yaml
+# Comment out stations with # to disable them
+relisten:
+  Veronica: veronica
+  Radio 10: radio10
+  # Juize: juize    # Disabled
+
+myonlineradio:
+  Radio 10: radio-10
+  Sky Radio: sky-radio
+  
+priority_stations:
+  - Radio 10
+  - Sky Radio
+```
+
+**To disable any station:** Just add `#` at the start of the line  
+**To re-enable:** Remove the `#`
+
+See [STATIONS.md](STATIONS.md) for detailed documentation.
+
 ## Supported Radio Stations
 
-The script monitors 19 stations from relisten.nl:
+**Primary source (relisten.nl):** 40 stations including SLAM!, 538, NPO 3FM, Q-music, 100% NL, Sky Radio, Radio Veronica, Radio 10, KINK, Joe, and many more.
 
-1. SLAM!
-2. 538
-3. NPO 3FM
-4. Q-MUSIC
-5. 100% NL
-6. Sky Radio
-7. Radio Veronica
-8. Radio 10
-9. Juize
-10. FunX
-11. Arrow Caz
-12. Arrow Classic Rock
-13. RadioNL
-14. Simone FM
-15. NPO Radio 1
-16. Sublime FM
-17. Radio Decibel
-18. NPO Radio 2
-19. WILD FM Hitradio
+**Fallback source (myonlineradio.nl):** 99 stations including all major Dutch national stations plus regional and specialty stations.
 
 ## Installation
 

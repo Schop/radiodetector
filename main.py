@@ -4,6 +4,8 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import time
 import re
+import os
+import yaml
 from colorama import Fore, Style, init
 
 # Initialize colorama for cross-platform colored terminal output
@@ -27,6 +29,34 @@ TARGET_ARTISTS = ['Phil Collins', 'Genesis']
 # Song titles to check (case-insensitive matching)
 # Examples: TARGET_SONGS = ['In The Air Tonight', 'Another Day in Paradise', 'Land of Confusion']
 TARGET_SONGS = []
+
+# Load station mappings from YAML file
+def load_station_config():
+    """Load station mappings from stations.yaml"""
+    config_path = os.path.join(os.path.dirname(__file__), 'stations.yaml')
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+            return config
+    except FileNotFoundError:
+        print(f"{Fore.RED}Error: stations.yaml not found{Style.RESET_ALL}")
+        return {'relisten': {}, 'myonlineradio': {}, 'priority_stations': []}
+    except yaml.YAMLError as e:
+        print(f"{Fore.RED}Error parsing stations.yaml: {e}{Style.RESET_ALL}")
+        return {'relisten': {}, 'myonlineradio': {}, 'priority_stations': []}
+
+# Load configuration
+STATION_CONFIG = load_station_config()
+# Convert all relisten keys to strings to handle numeric station names like "538"
+RELISTEN_STATIONS = {str(k): v for k, v in STATION_CONFIG.get('relisten', {}).items()}
+ALL_MYONLINERADIO_STATIONS = STATION_CONFIG['myonlineradio']
+PRIORITY_STATIONS = STATION_CONFIG['priority_stations']
+
+# Filter out myonlineradio stations that are already in relisten (to avoid duplicates and reduce fetching)
+# This reduces 89 stations to only unique ones not available on relisten.nl
+relisten_station_names = set(RELISTEN_STATIONS.keys())
+MYONLINERADIO_STATIONS = {name: slug for name, slug in ALL_MYONLINERADIO_STATIONS.items() 
+                           if name not in relisten_station_names}
 
 def get_timestamp():
     """Get current time in HH:mm format"""
@@ -107,19 +137,19 @@ def fetch_icy_metadata_from_stream(stream_url, station_name):
         return None
 
 
-def fetch_joe_from_myonlineradio():
-    """Fetch and parse joe radio from myonlineradio.nl playlist page"""
+def fetch_station_from_myonlineradio(station_slug):
+    """Fetch and parse any station from myonlineradio.nl playlist page"""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
         }
-        response = requests.get('https://myonlineradio.nl/joe/playlist', timeout=15, headers=headers)
+        response = requests.get(f'https://myonlineradio.nl/{station_slug}/playlist', timeout=15, headers=headers)
         response.raise_for_status()
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Find the js-songListC div with data-url="joe"
-        song_list = soup.find('div', {'class': 'js-songListC', 'data-url': 'joe'})
+        # Find the js-songListC div with data-url matching the station
+        song_list = soup.find('div', {'class': 'js-songListC', 'data-url': station_slug})
         if not song_list:
             return None
         
@@ -150,12 +180,13 @@ def fetch_joe_from_myonlineradio():
         return None
     
     except Exception as e:
-        print(f"Error fetching joe from myonlineradio.nl: {e}")
+        # Only print if verbose debugging needed
+        # print(f"Error fetching {station_slug} from myonlineradio.nl: {e}")
         return None
 
 
 def fetch_all_stations_from_relisten():
-    """Fetch and parse all stations from https://www.relisten.nl/"""
+    """Fetch and parse all stations from https://www.relisten.nl/ homepage"""
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -168,6 +199,9 @@ def fetch_all_stations_from_relisten():
         # Dict to store station -> (artist, song) mapping
         stations_data = {}
         
+        # Get list of stations to monitor from config (use as filter)
+        monitored_stations = set(RELISTEN_STATIONS.keys()) if RELISTEN_STATIONS else None
+        
         # Find all h2 tags (station names)
         h2_tags = soup.find_all('h2')
         
@@ -176,6 +210,10 @@ def fetch_all_stations_from_relisten():
             
             # Skip non-station h2 tags (like "Muziekspeler")
             if not station_name or len(station_name) < 2 or station_name == 'Muziekspeler':
+                continue
+            
+            # If we have a filter, only include configured stations
+            if monitored_stations and station_name not in monitored_stations:
                 continue
             
             # Find the next h4 (song title) after this h2
@@ -204,16 +242,15 @@ def fetch_all_stations_from_relisten():
         return stations_data
     
     except Exception as e:
-        print(f"Error fetching from relisten.nl: {e}")
+        print(f"{Fore.YELLOW}Error fetching from relisten.nl: {e}{Style.RESET_ALL}")
         return {}
-
 
 
 def main():
     """Main loop - Monitor Dutch radio stations for target artists and songs"""
     print("Initializing radio checker...")
-    print("- Monitoring 19 stations from relisten.nl")
-    print("- Monitoring joe.nl (via stream metadata + myonlineradio.nl fallback)")
+    print(f"- Monitoring {len(RELISTEN_STATIONS)} stations from relisten.nl")
+    print(f"- Monitoring {len(MYONLINERADIO_STATIONS)} unique stations from myonlineradio.nl (excluding duplicates)")
     print(f"- Target artists: {', '.join(TARGET_ARTISTS) if TARGET_ARTISTS else 'None'}")
     print(f"- Target songs: {', '.join(TARGET_SONGS) if TARGET_SONGS else 'None'}")
     print("=" * 60)
@@ -223,21 +260,34 @@ def main():
     
     try:
         while True:
-            # Fetch all real-time playlist data from relisten.nl
-            stations_data = fetch_all_stations_from_relisten()
+            stations_data = {}
             
-            # Fetch joe.nl data - prioritize myonlineradio.nl for consistent artist/song order
-            joe_data = fetch_joe_from_myonlineradio()
-            if joe_data:
-                stations_data['joe.nl'] = joe_data
-            else:
-                # Fall back to ICY stream metadata if webpage fails
-                metadata = fetch_icy_metadata_from_stream('https://stream.joe.nl/joe/mp3', 'joe.nl')
-                if metadata:
-                    stations_data['joe.nl'] = metadata
+            # Fetch from relisten.nl (homepage scraping)
+            if RELISTEN_STATIONS:
+                relisten_data = fetch_all_stations_from_relisten()
+                if relisten_data:
+                    stations_data.update(relisten_data)
+            
+            # Fetch from myonlineradio.nl (individual station playlists)
+            if MYONLINERADIO_STATIONS:
+                print(f"{Fore.CYAN}Fetching {len(MYONLINERADIO_STATIONS)} stations from myonlineradio.nl...{Style.RESET_ALL}")
+                myonline_fetched = 0
+                myonline_failed = 0
+                for station_name, slug in list(MYONLINERADIO_STATIONS.items())[:10]:  # Limit to first 10 for testing
+                    # Skip if already fetched from relisten (avoid duplicates)
+                    if station_name in stations_data:
+                        continue
+                    
+                    result = fetch_station_from_myonlineradio(slug)
+                    if result:
+                        stations_data[station_name] = result
+                        myonline_fetched += 1
+                    else:
+                        myonline_failed += 1
+                print(f"{Fore.CYAN}Myonlineradio: {myonline_fetched} fetched, {myonline_failed} failed{Style.RESET_ALL}")
             
             if not stations_data:
-                print("Warning: No station data retrieved")
+                print(f"{Fore.RED}Warning: No station data retrieved from any source{Style.RESET_ALL}")
                 time.sleep(60)
                 continue
             
