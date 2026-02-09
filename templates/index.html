@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RadioDetector - Phil Collins & Genesis Tracker</title>
+    
+    <!-- Pico CSS - Minimal, classless CSS framework (~2.5KB) -->
+    <link rel="stylesheet" href="https://cdn.pico.css/pico.css">
+    
+    <style>
+        :root {
+            --form-element-valid-border-color: #27ae60;
+            --form-element-active-border-color: #e74c3c;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        main {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 8px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(4px);
+        }
+        
+        h1 {
+            color: #e74c3c;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-bottom: 20px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0 5px 0;
+        }
+        
+        .stat-label {
+            font-size: 0.8em;
+            opacity: 0.9;
+        }
+        
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+        }
+        
+        table {
+            font-size: 0.95em;
+            width: 100%;
+            margin-top: 20px;
+        }
+        
+        td {
+            padding: 10px 5px;
+        }
+        
+        tr:nth-child(odd) {
+            background-color: rgba(230,126,34,0.05);
+        }
+        
+        .timestamp {
+            color: #7f8c8d;
+            font-size: 0.85em;
+            white-space: nowrap;
+        }
+        
+        .artist {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+        
+        .station-badge {
+            background-color: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.85em;
+            white-space: nowrap;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #7f8c8d;
+        }
+        
+        .actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .actions a, .actions button {
+            flex: 1;
+            min-width: 120px;
+        }
+        
+        .last-updated {
+            font-size: 0.85em;
+            color: #7f8c8d;
+            margin-top: 15px;
+            text-align: center;
+        }
+        
+        @media (max-width: 576px) {
+            .filters {
+                grid-template-columns: 1fr;
+            }
+            
+            table {
+                font-size: 0.8em;
+            }
+            
+            td {
+                padding: 8px 3px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <h1>🎵 RadioDetector</h1>
+        <p class="subtitle">Tracking Phil Collins & Genesis songs across 19 Dutch radio stations</p>
+        
+        <!-- Statistics -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Total Detections</div>
+                <div class="stat-value">{{ total_count }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Unique Stations</div>
+                <div class="stat-value">{{ stations|length }}</div>
+            </div>
+        </div>
+        
+        <!-- Filters -->
+        <form method="get" class="filters">
+            <input 
+                type="text" 
+                name="station" 
+                placeholder="Filter by station..." 
+                value="{{ station_filter }}"
+            >
+            <select name="days">
+                <option value="0" {% if days_filter == '0' %}selected{% endif %}>All time</option>
+                <option value="1" {% if days_filter == '1' %}selected{% endif %}>Last 24 hours</option>
+                <option value="7" {% if days_filter == '7' %}selected{% endif %}>Last 7 days</option>
+                <option value="30" {% if days_filter == '30' %}selected{% endif %}>Last 30 days</option>
+            </select>
+            <button type="submit">Filter</button>
+            <a href="/" role="button" class="secondary">Clear</a>
+        </form>
+        
+        <!-- Auto-refresh note -->
+        <script>
+            // Auto-refresh page every 60 seconds
+            setTimeout(() => location.reload(), 60000);
+        </script>
+        
+        <!-- Results -->
+        {% if songs %}
+            <table>
+                <thead>
+                    <tr>
+                        <th>Station</th>
+                        <th>Artist</th>
+                        <th>Song</th>
+                        <th>Detected</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for song in songs %}
+                    <tr>
+                        <td><span class="station-badge">{{ song.station }}</span></td>
+                        <td><span class="artist">{{ song.artist }}</span></td>
+                        <td>{{ song.song }}</td>
+                        <td class="timestamp">{{ song.timestamp }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <div class="actions">
+                <a href="/api/export" role="button">📥 Export CSV</a>
+                <a href="/api/stats" role="button" class="secondary">📊 API Stats</a>
+            </div>
+            
+            <div class="last-updated">
+                ✨ Page auto-refreshes every 60 seconds
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <p>No detections found yet.</p>
+                <p style="font-size: 0.9em; margin-top: 10px;">
+                    Make sure <code>main.py</code> is running in the background to collect songs from radio stations.
+                </p>
+            </div>
+        {% endif %}
+        
+        <hr style="margin-top: 30px;">
+        <footer style="text-align: center; color: #7f8c8d; font-size: 0.85em; padding-bottom: 20px;">
+            <p>RadioDetector v1.0 • Monitoring relisten.nl • Running on minimal hardware 🚀</p>
+        </footer>
+    </main>
+</body>
+</html>

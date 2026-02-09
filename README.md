@@ -45,7 +45,9 @@ The script monitors 19 stations from relisten.nl:
 
 ## Usage
 
-Run the script:
+### 1. Start the Radio Detector (Background)
+
+Run in a terminal:
 ```bash
 python main.py
 ```
@@ -54,6 +56,24 @@ The script will:
 - Display current songs every minute for each station
 - Alert in red when a target artist (Phil Collins/Genesis) is detected
 - Log all target artist songs to `radio_songs.db` with timestamps
+
+### 2. View Results via Web Dashboard (Optional)
+
+While `main.py` runs, start the Flask web server in another terminal:
+```bash
+python web_app.py
+```
+
+Then open your browser:
+- Local: **http://localhost:5000**
+- From another machine (Pi): **http://<your-pi-ip>:5000**
+
+The dashboard shows:
+- 📊 Total detections and unique stations
+- 🎵 Full song history with filters
+- 🔍 Filter by station or date range
+- 📥 Export to CSV
+- ✨ Auto-refresh every 60 seconds
 
 ## Database
 
@@ -66,6 +86,48 @@ The SQLite database `radio_songs.db` stores detected target songs in a `songs` t
 | song      | TEXT    | Song title                               |
 | artist    | TEXT    | Artist name                              |
 | timestamp | TEXT    | ISO format timestamp of detection        |
+
+## Project Structure
+
+```
+radiochecker/
+├── main.py                 # Radio detector daemon
+├── web_app.py              # Flask web dashboard
+├── requirements.txt        # Python dependencies
+├── README.md              # This file
+├── radio_songs.db         # SQLite database (auto-created)
+└── templates/
+    └── index.html         # Web dashboard template
+```
+
+## Running on Raspberry Pi Zero
+
+On your Pi, you can run both services in tmux sessions:
+
+```bash
+# Terminal 1: Start radio detector
+tmux new-session -d -s detector "cd ~/radiochecker && python main.py"
+
+# Terminal 2: Start web dashboard
+tmux new-session -d -s dashboard "cd ~/radiochecker && python web_app.py"
+
+# View sessions
+tmux list-sessions
+
+# Connect to detector output
+tmux attach-session -t detector
+
+# Stop both
+tmux kill-session -t detector
+tmux kill-session -t dashboard
+```
+
+Or as background services with `nohup`:
+
+```bash
+nohup python main.py > detector.log 2>&1 &
+nohup python web_app.py > dashboard.log 2>&1 &
+```
 
 ## How It Works
 
@@ -86,11 +148,13 @@ The SQLite database `radio_songs.db` stores detected target songs in a `songs` t
 
 ## Technology Stack
 
-- **Python 3.12** (or 3.9+ for older systems like Raspberry Pi Zero)
+- **Python 3.12** (or 3.9+ for Raspberry Pi Zero)
 - **requests** - HTTP library for fetching relisten.nl
 - **BeautifulSoup4** - HTML parsing
+- **flask** - Lightweight web framework
+- **Pico CSS** - Minimal classless CSS (~2.5KB, served via CDN)
 - **sqlite3** - Built-in database
 - **colorama** - Cross-platform colored terminal output
 
-**Total dependencies: 3 lightweight pure-Python packages** (no Selenium, no Chromium, no JavaScript rendering)
+**Total dependencies: 4 lightweight pure-Python packages** (no Selenium, no Chromium, no JavaScript rendering)
 
