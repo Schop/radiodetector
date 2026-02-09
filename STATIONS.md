@@ -10,6 +10,14 @@ Station configurations are stored in `config.yaml` which supports comments with 
 # Radio Station Configuration
 # Comment out stations with # to disable them
 
+# Target artists and songs to check
+target_artists:
+  - Phil Collins
+  - Genesis
+
+target_songs:
+  - Africa
+
 relisten:
   Arrow Classic Rock: arrow
   FunX: funx
@@ -20,17 +28,36 @@ relisten:
 myonlineradio:
   Radio 10: radio-10
   # Sky Radio: sky-radio   # Temporarily disabled
-  
-priority_stations:
-  - Radio 10
-  - Sky Radio
-  # - Juize    # Not monitored when commented
+
+playlist24:
+  KINK: kink-playlist
+  NPO 3FM: 3fm-playlist
+  # Aardschok: aardschok-playlist  # Disabled
 ```
 
 **To disable a station:** Just add `#` at the start of the line  
 **To re-enable:** Remove the `#`
 
 ## Fields
+
+### `target_artists`
+List of artist names to monitor. When any song by these artists is detected, you'll get a red alert with a beep.
+
+```yaml
+target_artists:
+  - Phil Collins
+  - Genesis
+  - Toto
+```
+
+### `target_songs`
+List of song titles to monitor. When any of these songs are detected (regardless of artist), you'll get a red alert with a beep.
+
+```yaml
+target_songs:
+  - Africa
+  - In The Air Tonight
+```
 
 ### `relisten`
 Lists stations to monitor from relisten.nl homepage. The application scrapes https://www.relisten.nl/ and filters to only these stations.
@@ -54,14 +81,14 @@ Radio 10: radio-10     # → https://myonlineradio.nl/radio-10/playlist
 Sky Radio: sky-radio   # → https://myonlineradio.nl/sky-radio/playlist
 ```
 
-### `priority_stations`
-List of station names to check first during myonlineradio.nl fallback mode. These should be stations that:
-- Are available on both relisten.nl and myonlineradio.nl
-- Are popular/major national stations
-- You want to monitor with lowest latency during fallback
+### `playlist24`
+Maps station display names to their playlist24.nl URL slugs. These are used when fetching station data from https://playlist24.nl/[slug]/
 
-**Current priority stations (22):**
-Stations that overlap between both sources for seamless fallback.
+**Example:**
+```yaml
+KINK: kink-playlist       # → https://playlist24.nl/kink-playlist/
+NPO 3FM: 3fm-playlist     # → https://playlist24.nl/3fm-playlist/
+```
 
 ## How to Edit (YAML)
 
@@ -99,19 +126,16 @@ relisten:
    Station Name: station-slug
    ```
 
-3. Optionally add to `priority_stations` if it's a major station:
+**For playlist24.nl:**
+1. Find the station in the dropdown menu on https://playlist24.nl
+2. Add to the `playlist24` section:
    ```yaml
-   priority_stations:
-     - Station Name
+   Station Name: station-slug
    ```
 
 ### Removing a station
-1. Delete the line from the relevant section (`relisten` or `myonlineradio`)
-2. Remove from `priority_stations` if present
-3. Or simply comment it out with `#` to keep the configuration
-
-### Changing station priority
-Reorder entries in the `priority_stations` list. Stations at the top are checked first during fallback.
+1. Delete the line from the relevant section (`relisten`, `myonlineradio`, or `playlist24`)
+2. Or simply comment it out with `#` to keep the configuration
 
 ## Finding Station Names/Slugs
 
@@ -128,16 +152,21 @@ To find station names:
 2. Search for the station
 3. The URL will be: `https://myonlineradio.nl/[SLUG]/playlist`
 
+### playlist24.nl
+1. Visit https://playlist24.nl
+2. Check the dropdown menu for available stations
+3. The URL will be: `https://playlist24.nl/[SLUG]/`
+
 ## Operation Modes
 
-- **Primary:** Uses relisten.nl individual station playlists (40 stations)
-- **Fallback:** If relisten.nl is down, switches to myonlineradio.nl (89 stations)
-- **Priority:** During fallback, checks priority stations first for faster coverage
+- **Primary:** Uses relisten.nl homepage scraping (14 stations)
+- **Secondary Fallback:** If relisten.nl is down, switches to myonlineradio.nl (18 unique stations)
+- **Tertiary Fallback:** If both above fail or return few results, adds playlist24.nl (13 unique stations)
 
 ## Notes
 
-- Station names in `priority_stations` must exactly match those in `myonlineradio`
 - The application will automatically reload the configuration on restart
 - Invalid YAML will cause the application to use an empty configuration
 - Use `#` to comment out stations without deleting them
-- Currently configured: **40 relisten stations**, **89 myonlineradio stations** (22 priority)
+- The system automatically avoids checking duplicate stations across sources
+- Currently configured: **14 relisten stations**, **18 myonlineradio stations**, **13 playlist24 stations**

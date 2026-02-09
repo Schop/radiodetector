@@ -33,10 +33,10 @@ def load_station_config():
             return config
     except FileNotFoundError:
         print(f"{Fore.RED}Error: config.yaml not found{Style.RESET_ALL}")
-        return {'relisten': {}, 'myonlineradio': {}}
+        return {'relisten': {}, 'myonlineradio': {}, 'playlist24': {}}
     except yaml.YAMLError as e:
         print(f"{Fore.RED}Error parsing config.yaml: {e}{Style.RESET_ALL}")
-        return {'relisten': {}, 'myonlineradio': {}}
+        return {'relisten': {}, 'myonlineradio': {}, 'playlist24': {}}
 
 # Load configuration
 STATION_CONFIG = load_station_config()
@@ -46,13 +46,19 @@ STATION_CONFIG = load_station_config()
 TARGET_ARTISTS = STATION_CONFIG.get('target_artists', [])
 TARGET_SONGS = STATION_CONFIG.get('target_songs', [])
 RELISTEN_STATIONS = {str(k): v for k, v in STATION_CONFIG.get('relisten', {}).items()}
-ALL_MYONLINERADIO_STATIONS = STATION_CONFIG['myonlineradio']
+ALL_MYONLINERADIO_STATIONS = STATION_CONFIG.get('myonlineradio', {})
+ALL_PLAYLIST24_STATIONS = STATION_CONFIG.get('playlist24', {})
 
 # Filter out myonlineradio stations that are already in relisten (to avoid duplicates and reduce fetching)
 # This reduces 89 stations to only unique ones not available on relisten.nl
 relisten_station_names = set(RELISTEN_STATIONS.keys())
 MYONLINERADIO_STATIONS = {name: slug for name, slug in ALL_MYONLINERADIO_STATIONS.items() 
                            if name not in relisten_station_names}
+
+# Filter out playlist24 stations that are already in relisten or myonlineradio (to avoid duplicates)
+all_covered_stations = set(RELISTEN_STATIONS.keys()) | set(ALL_MYONLINERADIO_STATIONS.keys())
+PLAYLIST24_STATIONS = {name: slug for name, slug in ALL_PLAYLIST24_STATIONS.items() 
+                       if name not in all_covered_stations}
 
 def get_timestamp():
     """Get current time in HH:mm format"""
@@ -181,6 +187,64 @@ def fetch_station_from_myonlineradio(station_slug):
         return None
 
 
+def fetch_station_from_playlist24(station_slug):
+    """Fetch and parse any station from playlist24.nl playlist page"""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        response = requests.get(f'https://playlist24.nl/{station_slug}/', timeout=15, headers=headers)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Find the playlist table - look for the most recent song
+        # playlist24 typically uses a table structure with artist and title columns
+        table = soup.find('table', {'class': lambda x: x and 'playlist' in str(x).lower() if x else False})
+        
+        if not table:
+            # Try finding any table that might contain playlist data
+            table = soup.find('table')
+        
+        if not table:
+            return None
+        
+        # Try to find the first row with song data (skip header)
+        rows = table.find_all('tr')
+        
+        for row in rows:
+            cells = row.find_all('td')
+            
+            if len(cells) >= 2:
+                # Usually format is: [Time, Artist, Title] or [Artist, Title]
+                # Try to extract artist and title
+                # Common patterns: time in first cell, then artist, then title
+                # Or: artist in first, title in second
+                
+                if len(cells) >= 3:
+                    # Likely: [Time, Artist, Title]
+                    artist = cells[1].get_text(strip=True)
+                    song = cells[2].get_text(strip=True)
+                else:
+                    # Likely: [Artist, Title]
+                    artist = cells[0].get_text(strip=True)
+                    song = cells[1].get_text(strip=True)
+                
+                # Validate we have actual data (not header text)
+                if artist and song and len(artist) > 1 and len(song) > 1:
+                    # Skip if looks like header
+                    if artist.lower() not in ['artiest', 'artist', 'tijd', 'time'] and \
+                       song.lower() not in ['nummer', 'title', 'song', 'track']:
+                        return (artist, song)
+        
+        return None
+    
+    except Exception as e:
+        # Only print if verbose debugging needed
+        # print(f"Error fetching {station_slug} from playlist24.nl: {e}")
+        return None
+
+
 def fetch_all_stations_from_relisten():
     """Fetch and parse all stations from https://www.relisten.nl/ homepage"""
     try:
@@ -247,6 +311,7 @@ def main():
     print("Initializing radio checker...")
     print(f"- Monitoring {len(RELISTEN_STATIONS)} stations from relisten.nl")
     print(f"- Monitoring {len(MYONLINERADIO_STATIONS)} unique stations from myonlineradio.nl (excluding duplicates)")
+    print(f"- Monitoring {len(PLAYLIST24_STATIONS)} unique stations from playlist24.nl (excluding duplicates)")
     print(f"- Target artists: {', '.join(TARGET_ARTISTS) if TARGET_ARTISTS else 'None'}")
     print(f"- Target songs: {', '.join(TARGET_SONGS) if TARGET_SONGS else 'None'}")
     print("=" * 60)
@@ -279,6 +344,22 @@ def main():
                         continue
                     
                     result = fetch_station_from_myonlineradio(slug)
+                    if result:
+                        stations_data[station_name] = result
+            
+            # Fetch from playlist24.nl (individual station playlists)
+            # If both relisten and myonlineradio failed or returned few results, try all playlist24 stations
+            # Otherwise use only unique stations to avoid redundant checks
+            use_all_playlist24 = relisten_failed or len(stations_data) < 5
+            playlist24_stations_to_check = ALL_PLAYLIST24_STATIONS if use_all_playlist24 else PLAYLIST24_STATIONS
+            
+            if playlist24_stations_to_check:
+                for station_name, slug in playlist24_stations_to_check.items():
+                    # Skip if already fetched from other sources (avoid duplicates)
+                    if station_name in stations_data:
+                        continue
+                    
+                    result = fetch_station_from_playlist24(slug)
                     if result:
                         stations_data[station_name] = result
             

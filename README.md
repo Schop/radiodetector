@@ -4,10 +4,10 @@ A Python script that monitors Dutch radio stations for songs by target artists (
 
 ## Features
 
-- **Real-time monitoring** of 40 Dutch radio stations via [relisten.nl](https://www.relisten.nl) (primary) or 99 stations via [myonlineradio.nl](https://myonlineradio.nl) (fallback)
-- **Automatic fallback** - Switches to myonlineradio.nl when relisten.nl is unavailable
-- **Configurable stations** - Easy-to-edit JSON file for station mappings
-- **Target artist detection** with red terminal alerts when Phil Collins or Genesis songs are played
+- **Real-time monitoring** of 40 Dutch radio stations via [relisten.nl](https://www.relisten.nl) (primary), 18 stations via [myonlineradio.nl](https://myonlineradio.nl) (secondary fallback), or 13 stations via [playlist24.nl](https://playlist24.nl) (tertiary fallback)
+- **Triple fallback system** - Automatically switches between sources when unavailable
+- **Configurable stations** - Easy-to-edit YAML file for station mappings and target artists/songs
+- **Target artist & song detection** with red terminal alerts and beep when matches are found
 - **SQLite database** logging all detected target artist songs with timestamps
 - **Pi Zero compatible** - No Selenium/Chromium, just pure Python libraries
 - **Efficient** - Fetches all stations in ~100-200ms per cycle
@@ -20,6 +20,15 @@ Station configurations are stored in [`config.yaml`](config.yaml):
 
 ```yaml
 # Comment out stations with # to disable them
+
+# Target artists and songs to check
+target_artists:
+  - Phil Collins
+  - Genesis
+
+target_songs:
+  - Africa
+
 relisten:
   Veronica: veronica
   Radio 10: radio10
@@ -28,10 +37,10 @@ relisten:
 myonlineradio:
   Radio 10: radio-10
   Sky Radio: sky-radio
-  
-priority_stations:
-  - Radio 10
-  - Sky Radio
+
+playlist24:
+  KINK: kink-playlist
+  NPO 3FM: 3fm-playlist
 ```
 
 **To disable any station:** Just add `#` at the start of the line  
@@ -41,9 +50,11 @@ See [STATIONS.md](STATIONS.md) for detailed documentation.
 
 ## Supported Radio Stations
 
-**Primary source (relisten.nl):** 40 stations including SLAM!, 538, NPO 3FM, Q-music, 100% NL, Sky Radio, Radio Veronica, Radio 10, KINK, Joe, and many more.
+**Primary source (relisten.nl):** 14 stations including SLAM!, 538, NPO 3FM, Q-music, 100% NL, Sky Radio, Radio Veronica, Radio 10, FunX, Arrow Classic Rock, RadioNL, NPO Radio 1, and NPO Radio 2.
 
-**Fallback source (myonlineradio.nl):** 99 stations including all major Dutch national stations plus regional and specialty stations.
+**Secondary fallback (myonlineradio.nl):** 18 stations including all major Dutch national stations plus regional and specialty stations.
+
+**Tertiary fallback (playlist24.nl):** 13 stations including 3FM Alternative, Aardschok, Arrow Classic Rock, KINK, NPO 3FM, NPO Radio 1, and more.
 
 ## Installation
 

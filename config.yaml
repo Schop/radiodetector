@@ -19,11 +19,13 @@ relisten:
   Sky Radio: skyradio
   Radio Veronica: veronica
   Radio 10: radio10
-  FunX: funx
   Arrow Classic Rock: arrow
   RadioNL: radionl
   NPO Radio 1: radio1
   NPO Radio 2: radio2
+  NPO Radio 5: radio5
+  KINK: kink
+  JOE: joe
   # Note: Homepage rotates ~19 stations at a time
 
 myonlineradio:
@@ -42,6 +44,17 @@ myonlineradio:
   Sky Radio: sky-radio
   SLAM!: slam
   Radio Veronica: veronica
-  All Time Hits: all-time-hits
-  KISS FM: kiss-fm
-  We Are The Beat: we-are-the-beat
+
+playlist24:
+  100% NL: 100pnl-playlist
+  Arrow Classic Rock: arrow-classic-rock-playlist
+  KINK: kink-playlist
+  NPO 3FM: 3fm-playlist
+  NPO Radio 1: radio-1-playlist
+  NPO Radio 2: radio-2-playlist
+  NPO Radio 5: radio-5-playlist
+  Q Music: qmusic-playlist
+  Radio 10: radio-10-playlist
+  Radio 538: radio-538-playlist
+  Sky Radio: skyradio-playlist
+  SLAM!: slamfm-playlist
