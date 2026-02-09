@@ -3,6 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import time
+import re
 from colorama import Fore, Style, init
 
 # Initialize colorama for cross-platform colored terminal output
@@ -30,6 +31,13 @@ TARGET_SONGS = ['Sweet Caroline']
 def get_timestamp():
     """Get current time in HH:mm format"""
     return datetime.now().strftime('%H:%M')
+
+def normalize_song_title(title):
+    """Remove prefix patterns like '#742: ' from song titles"""
+    # Pattern matches: # followed by digits, then :, then optional space(s)
+    # Example: "#742: Two Hearts" becomes "Two Hearts"
+    normalized = re.sub(r'^#\d+:\s*', '', title)
+    return normalized
 
 def fetch_icy_metadata_from_stream(stream_url, station_name):
     """Extract ICY metadata from streaming server"""
@@ -227,14 +235,15 @@ def main():
                 artist, song = stations_data[station]
                 
                 if song and artist:
-                    # Create song info string
-                    song_info = f"{artist} - {song}"
+                    # Normalize song title (remove patterns like "#742: ")
+                    normalized_song = normalize_song_title(song)
+                    normalized_song_info = f"{artist} - {normalized_song}"
                     
-                    # Check if this is different from last known song
-                    if station not in last_songs or last_songs[station] != song_info:
+                    # Check if this is different from last known song (using normalized version)
+                    if station not in last_songs or last_songs[station] != normalized_song_info:
                         ts = get_timestamp()
-                        print(f"[{ts}] [{station}] {song_info}")
-                        last_songs[station] = song_info
+                        print(f"[{ts}] [{station}] {normalized_song_info}")
+                        last_songs[station] = normalized_song_info
                         
                         # Check if artist is in target list
                         matched = False
@@ -243,24 +252,24 @@ def main():
                                 matched = True
                                 break
                         
-                        # Check if song is in target list
+                        # Check if song is in target list (using normalized song title)
                         if not matched:
                             for target_song in TARGET_SONGS:
-                                if target_song.lower() in song.lower():
+                                if target_song.lower() in normalized_song.lower():
                                     matched = True
                                     break
                         
                         # Log to database if matched
                         if matched:
-                            # Log to database
+                            # Log to database (store normalized song title)
                             timestamp = datetime.now().isoformat()
                             c.execute("INSERT INTO songs (station, song, artist, timestamp) VALUES (?, ?, ?, ?)",
-                                      (station, song, artist, timestamp))
+                                      (station, normalized_song, artist, timestamp))
                             conn.commit()
                             
                             # Print with red warning and timestamp
                             ts = get_timestamp()
-                            print(f"{Fore.RED}{Style.BRIGHT}[{ts}] ✓ {artist} - {song} ({station}){Style.RESET_ALL}")
+                            print(f"{Fore.RED}{Style.BRIGHT}[{ts}] ✓ {artist} - {normalized_song} ({station}){Style.RESET_ALL}")
 
             
             # Wait 60 seconds before next check
