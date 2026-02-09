@@ -3,58 +3,197 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RadioDetector - Phil Collins & Genesis Tracker</title>
+    <title>RadioDetector - Song Tracker</title>
     <link rel="stylesheet" href="/static/pico.min.css">
     <link rel="stylesheet" href="/static/style.css">
-
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <main>
-        <h1>Phil Collins & Genesis Detector</h1>
-        <p class="subtitle">Tracking Phil Collins & Genesis songs across 19 Dutch radio stations</p>
-        
-        <!-- Statistics -->
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-label">Total Detections</div>
-                <div class="stat-value">{{ total_count }}</div>
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 30px;">
+            <div>
+                <h1>Radio Detector</h1>
+                <h3 class="">Tracking songs and artists across 19 Dutch radio stations</h3>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">Unique Stations</div>
-                <div class="stat-value">{{ stations|length }}</div>
-            </div>
-                <div class="stat-card">
-                            <!-- Filters -->
-                    <form method="get" class="filters">
-                        <input 
-                            type="text" 
-                            name="station" 
-                            placeholder="Filter by station..." 
-                            value="{{ station_filter }}"
-                        >
-                        <select name="days">
-                            <option value="0" {% if days_filter == '0' %}selected{% endif %}>All time</option>
-                            <option value="1" {% if days_filter == '1' %}selected{% endif %}>Last 24 hours</option>
-                            <option value="7" {% if days_filter == '7' %}selected{% endif %}>Last 7 days</option>
-                            <option value="30" {% if days_filter == '30' %}selected{% endif %}>Last 30 days</option>
-                        </select>
-                        <button type="submit">Filter</button>
-                        <a href="/" role="button" class="secondary">Clear</a>
-                    </form>
+            <div style="display: flex; gap: 20px; align-items: flex-start; flex-shrink: 0;">
+                <div class="tracking-list">
+                    <div class="tracking-label">📻 Tracking Artists</div>
+                    {% if target_artists %}
+                        {% for artist in target_artists %}
+                        <span class="tracking-badge">{{ artist }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="tracking-badge-empty">None</span>
+                    {% endif %}
                 </div>
+                <div class="tracking-list">
+                    <div class="tracking-label">🎵 Tracking Songs</div>
+                    {% if target_songs %}
+                        {% for song in target_songs %}
+                        <span class="tracking-badge">{{ song }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <span class="tracking-badge-empty">None</span>
+                    {% endif %}
+                </div>
+                <div class="stats-compact">
+                    <div class="stat-card-small">
+                        <div class="stat-value-small">{{ total_count }}</div>
+                        <div class="stat-label-small">Total Detections</div>
+                    </div>
+                    <div class="stat-card-small">
+                        <div class="stat-value-small">{{ stations|length }}</div>
+                        <div class="stat-label-small">Unique Stations</div>
+                    </div>
+                </div>
+            </div>
         </div>
+        
+        <!-- Charts -->
+        <details open>
+            <summary><strong>📊 Statistics & Visualizations</strong></summary>
+            <div style="margin-top: 1rem;">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <h5 style="margin-bottom: 0.5rem;">Top Stations</h5>
+                        <canvas id="stationsChart" style="max-height: 250px;"></canvas>
+                    </div>
+                    <div>
+                        <h5 style="margin-bottom: 0.5rem;">Detections by Hour</h5>
+                        <canvas id="hoursChart" style="max-height: 250px;"></canvas>
+                    </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                    <div>
+                        <h5 style="margin-bottom: 0.5rem;">Detections by Day of Week</h5>
+                        <canvas id="weekdaysChart" style="max-height: 250px;"></canvas>
+                    </div>
+                    <div>
+                        <h5 style="margin-bottom: 0.5rem;">Last 14 Days Timeline</h5>
+                        <canvas id="timelineChart" style="max-height: 250px;"></canvas>
+                    </div>
+                </div>
+            </div>
+        </details>
         
 
         
-        <!-- Auto-refresh note -->
+        <!-- Auto-refresh and charts -->
         <script>
-            // Auto-refresh page every 60 seconds
-            setTimeout(() => location.reload(), 60000);
+            // Auto-refresh page every 5 minutes to get new data
+            setTimeout(() => location.reload(), 300000);
+            
+            // Load and render charts
+            fetch('/api/chart-data')
+                .then(response => response.json())
+                .then(data => {
+                    // Common chart options for Pi Zero optimization
+                    const commonOptions = {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        animation: false, // Disable animations for better performance
+                        plugins: {
+                            legend: { display: false }
+                        }
+                    };
+                    
+                    // Stations chart (horizontal bar)
+                    new Chart(document.getElementById('stationsChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: data.stations.labels,
+                            datasets: [{
+                                label: 'Detections',
+                                data: data.stations.data,
+                                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            ...commonOptions,
+                            indexAxis: 'y',
+                            scales: {
+                                x: { beginAtZero: true, ticks: { precision: 0 } }
+                            }
+                        }
+                    });
+                    
+                    // Hours chart (line)
+                    new Chart(document.getElementById('hoursChart'), {
+                        type: 'line',
+                        data: {
+                            labels: data.hours.labels,
+                            datasets: [{
+                                label: 'Songs',
+                                data: data.hours.data,
+                                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                                borderColor: 'rgba(153, 102, 255, 1)',
+                                borderWidth: 2,
+                                tension: 0.3
+                            }]
+                        },
+                        options: {
+                            ...commonOptions,
+                            scales: {
+                                y: { beginAtZero: true, ticks: { precision: 0 } }
+                            }
+                        }
+                    });
+                    
+                    // Weekdays chart (bar)
+                    new Chart(document.getElementById('weekdaysChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: data.weekdays.labels,
+                            datasets: [{
+                                label: 'Detections',
+                                data: data.weekdays.data,
+                                backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                                borderColor: 'rgba(255, 159, 64, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            ...commonOptions,
+                            scales: {
+                                y: { beginAtZero: true, ticks: { precision: 0 } }
+                            }
+                        }
+                    });
+                    
+                    // Timeline chart (line)
+                    new Chart(document.getElementById('timelineChart'), {
+                        type: 'line',
+                        data: {
+                            labels: data.timeline.labels,
+                            datasets: [{
+                                label: 'Daily Detections',
+                                data: data.timeline.data,
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 2,
+                                fill: true,
+                                tension: 0.3
+                            }]
+                        },
+                        options: {
+                            ...commonOptions,
+                            scales: {
+                                y: { beginAtZero: true, ticks: { precision: 0 } }
+                            }
+                        }
+                    });
+                })
+                .catch(err => console.error('Failed to load chart data:', err));
         </script>
         
         <!-- Results -->
         {% if songs %}
-            <table>
+            <table id="songsTable" class="display">
                 <thead>
                     <tr>
                         <th>Station</th>
@@ -75,13 +214,27 @@
                 </tbody>
             </table>
             
+            <script>
+                // Initialize DataTables with Pi Zero optimizations
+                $(document).ready(function() {
+                    $('#songsTable').DataTable({
+                        order: [[3, 'desc']], // Sort by timestamp descending
+                        pageLength: 25,
+                        lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
+                        responsive: true,
+                        autoWidth: false,
+                        language: {
+                            search: "Search all columns:",
+                            lengthMenu: "Show _MENU_ entries",
+                            info: "Showing _START_ to _END_ of _TOTAL_ detections"
+                        }
+                    });
+                });
+            </script>
+            
             <div class="actions">
                 <a href="/api/export" role="button">Export CSV</a>
                 <a href="/api/stats" role="button" class="secondary">API Stats</a>
-            </div>
-            
-            <div class="last-updated">
-                Page auto-refreshes every 60 seconds
             </div>
         {% else %}
             <div class="empty-state">
@@ -94,7 +247,7 @@
         
         <hr>
         <footer>
-            <p>RadioDetector v1.0 • Monitoring relisten.nl • Running on minimal hardware</p>
+            <p>RadioDetector v1.0 • Monitoring relisten.nl • Page auto-refreshes every 5 minutes</p>
         </footer>
     </main>
 </body>

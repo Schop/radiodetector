@@ -8,6 +8,7 @@ from flask import Flask, render_template, request
 from datetime import datetime, timedelta
 import sqlite3
 import os
+from main import TARGET_ARTISTS, TARGET_SONGS
 
 app = Flask(__name__)
 DB_PATH = 'radio_songs.db'
@@ -31,34 +32,11 @@ def index():
     conn = get_db_connection()
     c = conn.cursor()
     
-    # Get filter parameters
-    station_filter = request.args.get('station', '')
-    days_filter = request.args.get('days', '7')
-    
-    try:
-        days_back = int(days_filter)
-    except:
-        days_back = 7
-    
-    # Build query
-    query = "SELECT * FROM songs WHERE 1=1"
-    params = []
-    
-    if station_filter:
-        query += " AND station LIKE ?"
-        params.append(f"%{station_filter}%")
-    
-    if days_back > 0:
-        cutoff_date = (datetime.now() - timedelta(days=days_back)).isoformat()
-        query += " AND timestamp > ?"
-        params.append(cutoff_date)
-    
-    query += " ORDER BY timestamp DESC LIMIT 500"
-    
-    c.execute(query, params)
+    # Get all songs (DataTables will handle filtering client-side)
+    c.execute("SELECT * FROM songs ORDER BY timestamp DESC LIMIT 1000")
     songs = c.fetchall()
     
-    # Get unique stations for filter dropdown
+    # Get unique stations
     c.execute("SELECT DISTINCT station FROM songs ORDER BY station")
     stations = [row['station'] for row in c.fetchall()]
     
@@ -79,10 +57,10 @@ def index():
     
     return render_template(
         'index.html',
+        target_artists=TARGET_ARTISTS,
+        target_songs=TARGET_SONGS,
         songs=songs_data,
         stations=stations,
-        station_filter=station_filter,
-        days_filter=days_filter,
         total_count=len(songs_data)
     )
 
@@ -110,6 +88,70 @@ def stats():
         'total_songs': total,
         'by_station': by_station,
         'last_detection': last_detection['timestamp'] if last_detection else None
+    }
+
+@app.route('/api/chart-data')
+def chart_data():
+    """JSON API for chart data (lightweight for Pi Zero)"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Songs per station (top 10)
+    c.execute("""
+        SELECT station, COUNT(*) as count 
+        FROM songs 
+        GROUP BY station 
+        ORDER BY count DESC 
+        LIMIT 10
+    """)
+    stations_data = c.fetchall()
+    
+    # Songs by hour of day
+    c.execute("SELECT timestamp FROM songs")
+    all_songs = c.fetchall()
+    
+    hours = [0] * 24
+    days_of_week = [0] * 7
+    days_count = {}
+    
+    for row in all_songs:
+        ts = parse_iso_timestamp(row['timestamp'])
+        if ts:
+            # Hour distribution
+            hours[ts.hour] += 1
+            
+            # Day of week (0=Monday, 6=Sunday)
+            days_of_week[ts.weekday()] += 1
+            
+            # Daily count
+            date_key = ts.strftime('%Y-%m-%d')
+            days_count[date_key] = days_count.get(date_key, 0) + 1
+    
+    # Get last 14 days for timeline
+    sorted_days = sorted(days_count.items(), reverse=True)[:14]
+    sorted_days.reverse()  # Oldest to newest
+    
+    conn.close()
+    
+    day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    
+    return {
+        'stations': {
+            'labels': [row['station'] for row in stations_data],
+            'data': [row['count'] for row in stations_data]
+        },
+        'hours': {
+            'labels': [f"{h}:00" for h in range(24)],
+            'data': hours
+        },
+        'weekdays': {
+            'labels': day_names,
+            'data': days_of_week
+        },
+        'timeline': {
+            'labels': [day[0] for day in sorted_days],
+            'data': [day[1] for day in sorted_days]
+        }
     }
 
 @app.route('/api/export')

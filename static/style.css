@@ -1,6 +1,8 @@
 /* Custom styling for RadioDetector Dashboard */
 
-
+* {
+  font-size: 16px;
+}
 
 body {
   min-height: 100vh;
@@ -18,12 +20,14 @@ main {
 }
 
 h1 {
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin: 0 0 10px 0;
+  margin: 0 0 5px 0;
   font-size: 2.5rem;
   font-weight: 700;
+}
+
+h3 {
+  margin: 0;
 }
 
 .subtitle {
@@ -47,6 +51,166 @@ h1 {
   border-radius: 10px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Compact stats next to header */
+.stats-compact {
+  display: flex;
+  gap: 15px;
+  flex-shrink: 0;
+}
+
+.stat-card-small {
+  background: rgba(0, 0, 0, 0.03);
+  padding: 10px 15px;
+  border-radius: 8px;
+  text-align: center;
+  min-width: 100px;
+}
+
+.stat-value-small {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #333;
+  line-height: 1;
+}
+
+.stat-label-small {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Tracking lists */
+.tracking-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tracking-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
+}
+
+.tracking-badge {
+  display: inline-block;
+  background: #667eea;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tracking-badge-empty {
+  display: inline-block;
+  background: rgba(0, 0, 0, 0.05);
+  color: #999;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+@media (max-width: 768px) {
+  main > div:first-child {
+    flex-direction: column;
+  }
+  
+  main > div:first-child > div:last-child {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .stats-compact {
+    margin-top: 15px;
+  }
+}
+
+/* Charts section */
+details {
+  margin-bottom: 30px;
+}
+
+details summary {
+  cursor: pointer;
+  padding: 10px 0;
+  user-select: none;
+}
+
+details summary:hover {
+  opacity: 0.8;
+}
+
+/* Responsive charts for mobile */
+@media (max-width: 768px) {
+  details > div > div {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* DataTables customization */
+.dataTables_wrapper {
+  margin-top: 20px;
+}
+
+.dataTables_wrapper .dataTables_length,
+.dataTables_wrapper .dataTables_filter,
+.dataTables_wrapper .dataTables_info,
+.dataTables_wrapper .dataTables_paginate {
+  margin: 10px 0;
+}
+
+.dataTables_wrapper .dataTables_filter input {
+  margin-left: 10px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+}
+
+.dataTables_wrapper .dataTables_length select {
+  padding: 5px;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+  margin: 0 5px;
+}
+
+table.dataTable {
+  width: 100% !important;
+  margin: 0 !important;
+}
+
+table.dataTable thead th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button {
+  padding: 5px 10px;
+  margin: 0 2px;
+  border-radius: 4px;
+  border: 1px solid #ddd;
+  background: white;
+  cursor: pointer;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+  background: #f0f0f0;
+  border-color: #999;
+}
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current {
+  background: #007bff;
+  color: white !important;
+  border-color: #007bff;
 }
 
 .stat-card:hover {

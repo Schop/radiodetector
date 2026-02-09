@@ -23,6 +23,10 @@ conn.commit()
 # Artists to check
 TARGET_ARTISTS = ['Phil Collins', 'Genesis']
 
+# Song titles to check (case-insensitive matching)
+# Examples: TARGET_SONGS = ['In The Air Tonight', 'Another Day in Paradise', 'Land of Confusion']
+TARGET_SONGS = ['Sweet Caroline']
+
 def get_timestamp():
     """Get current time in HH:mm format"""
     return datetime.now().strftime('%H:%M')
@@ -84,6 +88,53 @@ def fetch_icy_metadata_from_stream(stream_url, station_name):
         return None
 
 
+def fetch_joe_from_myonlineradio():
+    """Fetch and parse joe radio from myonlineradio.nl playlist page"""
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+        response = requests.get('https://myonlineradio.nl/joe/playlist', timeout=15, headers=headers)
+        response.raise_for_status()
+        
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Find the js-songListC div with data-url="joe"
+        song_list = soup.find('div', {'class': 'js-songListC', 'data-url': 'joe'})
+        if not song_list:
+            return None
+        
+        # Find all song rows (they have class yt-row or live-link)
+        tracks = song_list.find_all('div', {'class': lambda x: x and 'yt-row' in x})
+        
+        if not tracks:
+            return None
+        
+        # Get the first track (most recent)
+        first_track = tracks[0]
+        
+        # Extract artist (byArtist span)
+        artist_span = first_track.find('span', {'itemprop': 'byArtist'})
+        if not artist_span:
+            return None
+        artist = artist_span.text.strip()
+        
+        # Extract song name (name span)
+        song_span = first_track.find('span', {'itemprop': 'name'})
+        if not song_span:
+            return None
+        song = song_span.text.strip()
+        
+        if artist and song:
+            return (artist, song)
+        
+        return None
+    
+    except Exception as e:
+        print(f"Error fetching joe from myonlineradio.nl: {e}")
+        return None
+
+
 def fetch_all_stations_from_relisten():
     """Fetch and parse all stations from https://www.relisten.nl/"""
     try:
@@ -140,11 +191,12 @@ def fetch_all_stations_from_relisten():
 
 
 def main():
-    """Main loop - Monitor Dutch radio stations for target artists"""
+    """Main loop - Monitor Dutch radio stations for target artists and songs"""
     print("Initializing radio checker...")
     print("- Monitoring 19 stations from relisten.nl")
-    print("- Monitoring joe.nl (via stream metadata)")
-    print("- Logging Phil Collins and Genesis songs")
+    print("- Monitoring joe.nl (via stream metadata + myonlineradio.nl fallback)")
+    print(f"- Target artists: {', '.join(TARGET_ARTISTS) if TARGET_ARTISTS else 'None'}")
+    print(f"- Target songs: {', '.join(TARGET_SONGS) if TARGET_SONGS else 'None'}")
     print("=" * 60)
     
     # Track the last song played on each station to detect changes
@@ -159,6 +211,11 @@ def main():
             metadata = fetch_icy_metadata_from_stream('https://stream.joe.nl/joe/mp3', 'joe.nl')
             if metadata:
                 stations_data['joe.nl'] = metadata
+            else:
+                # Fall back to myonlineradio.nl playlist page if stream metadata fails
+                joe_data = fetch_joe_from_myonlineradio()
+                if joe_data:
+                    stations_data['joe.nl'] = joe_data
             
             if not stations_data:
                 print("Warning: No station data retrieved")
@@ -180,18 +237,31 @@ def main():
                         last_songs[station] = song_info
                         
                         # Check if artist is in target list
+                        matched = False
                         for target_artist in TARGET_ARTISTS:
                             if target_artist.lower() in artist.lower():
-                                # Log to database
-                                timestamp = datetime.now().isoformat()
-                                c.execute("INSERT INTO songs (station, song, artist, timestamp) VALUES (?, ?, ?, ?)",
-                                          (station, song, artist, timestamp))
-                                conn.commit()
-                                
-                                # Print with red warning and timestamp
-                                ts = get_timestamp()
-                                print(f"{Fore.RED}{Style.BRIGHT}[{ts}] ✓ {artist} - {song} ({station}){Style.RESET_ALL}")
+                                matched = True
                                 break
+                        
+                        # Check if song is in target list
+                        if not matched:
+                            for target_song in TARGET_SONGS:
+                                if target_song.lower() in song.lower():
+                                    matched = True
+                                    break
+                        
+                        # Log to database if matched
+                        if matched:
+                            # Log to database
+                            timestamp = datetime.now().isoformat()
+                            c.execute("INSERT INTO songs (station, song, artist, timestamp) VALUES (?, ?, ?, ?)",
+                                      (station, song, artist, timestamp))
+                            conn.commit()
+                            
+                            # Print with red warning and timestamp
+                            ts = get_timestamp()
+                            print(f"{Fore.RED}{Style.BRIGHT}[{ts}] ✓ {artist} - {song} ({station}){Style.RESET_ALL}")
+
             
             # Wait 60 seconds before next check
             time.sleep(60)
