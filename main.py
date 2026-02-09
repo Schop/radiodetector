@@ -26,7 +26,7 @@ TARGET_ARTISTS = ['Phil Collins', 'Genesis']
 
 # Song titles to check (case-insensitive matching)
 # Examples: TARGET_SONGS = ['In The Air Tonight', 'Another Day in Paradise', 'Land of Confusion']
-TARGET_SONGS = ['Sweet Caroline']
+TARGET_SONGS = []
 
 def get_timestamp():
     """Get current time in HH:mm format"""
@@ -38,6 +38,17 @@ def normalize_song_title(title):
     # Example: "#742: Two Hearts" becomes "Two Hearts"
     normalized = re.sub(r'^#\d+:\s*', '', title)
     return normalized
+
+def create_song_key(artist, song):
+    """Create a normalized key for song comparison to handle different orderings"""
+    # Normalize both parts
+    norm_artist = normalize_song_title(artist.lower().strip())
+    norm_song = normalize_song_title(song.lower().strip())
+    
+    # Sort them alphabetically to create a consistent key regardless of order
+    # This way "Artist - Song" and "Song - Artist" will produce the same key
+    parts = sorted([norm_artist, norm_song])
+    return f"{parts[0]} | {parts[1]}"
 
 def fetch_icy_metadata_from_stream(stream_url, station_name):
     """Extract ICY metadata from streaming server"""
@@ -215,15 +226,15 @@ def main():
             # Fetch all real-time playlist data from relisten.nl
             stations_data = fetch_all_stations_from_relisten()
             
-            # Fetch metadata from joe.nl stream (MP3)
-            metadata = fetch_icy_metadata_from_stream('https://stream.joe.nl/joe/mp3', 'joe.nl')
-            if metadata:
-                stations_data['joe.nl'] = metadata
+            # Fetch joe.nl data - prioritize myonlineradio.nl for consistent artist/song order
+            joe_data = fetch_joe_from_myonlineradio()
+            if joe_data:
+                stations_data['joe.nl'] = joe_data
             else:
-                # Fall back to myonlineradio.nl playlist page if stream metadata fails
-                joe_data = fetch_joe_from_myonlineradio()
-                if joe_data:
-                    stations_data['joe.nl'] = joe_data
+                # Fall back to ICY stream metadata if webpage fails
+                metadata = fetch_icy_metadata_from_stream('https://stream.joe.nl/joe/mp3', 'joe.nl')
+                if metadata:
+                    stations_data['joe.nl'] = metadata
             
             if not stations_data:
                 print("Warning: No station data retrieved")
@@ -237,25 +248,29 @@ def main():
                 if song and artist:
                     # Normalize song title (remove patterns like "#742: ")
                     normalized_song = normalize_song_title(song)
-                    normalized_song_info = f"{artist} - {normalized_song}"
+                    normalized_artist = normalize_song_title(artist)
+                    normalized_song_info = f"{normalized_artist} - {normalized_song}"
                     
-                    # Check if this is different from last known song (using normalized version)
-                    if station not in last_songs or last_songs[station] != normalized_song_info:
+                    # Create a unique key to detect if this is the same song (handles ordering issues)
+                    song_key = create_song_key(artist, song)
+                    
+                    # Check if this is different from last known song (using song key)
+                    if station not in last_songs or last_songs[station] != song_key:
                         ts = get_timestamp()
                         print(f"[{ts}] [{station}] {normalized_song_info}")
-                        last_songs[station] = normalized_song_info
+                        last_songs[station] = song_key
                         
                         # Check if artist is in target list
                         matched = False
                         for target_artist in TARGET_ARTISTS:
-                            if target_artist.lower() in artist.lower():
+                            if target_artist and target_artist.lower() in normalized_artist.lower():
                                 matched = True
                                 break
                         
                         # Check if song is in target list (using normalized song title)
                         if not matched:
                             for target_song in TARGET_SONGS:
-                                if target_song.lower() in normalized_song.lower():
+                                if target_song and target_song.lower() in normalized_song.lower():
                                     matched = True
                                     break
                         
@@ -264,12 +279,12 @@ def main():
                             # Log to database (store normalized song title)
                             timestamp = datetime.now().isoformat()
                             c.execute("INSERT INTO songs (station, song, artist, timestamp) VALUES (?, ?, ?, ?)",
-                                      (station, normalized_song, artist, timestamp))
+                                      (station, normalized_song, normalized_artist, timestamp))
                             conn.commit()
                             
                             # Print with red warning and timestamp
                             ts = get_timestamp()
-                            print(f"{Fore.RED}{Style.BRIGHT}[{ts}] ✓ {artist} - {normalized_song} ({station}){Style.RESET_ALL}")
+                            print(f"{Fore.RED}{Style.BRIGHT}[{ts}] ✓ {normalized_artist} - {normalized_song} ({station}){Style.RESET_ALL}")
 
             
             # Wait 60 seconds before next check
