@@ -208,7 +208,7 @@
                         <td><span class="station">{{ song.station }}</span></td>
                         <td><span class="artist">{{ song.artist }}</span></td>
                         <td>{{ song.song }}</td>
-                        <td class="timestamp">{{ song.timestamp }}</td>
+                        <td class="timestamp" data-order="{{ song.timestamp_raw }}">{{ song.timestamp }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>

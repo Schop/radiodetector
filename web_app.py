@@ -46,7 +46,11 @@ def index():
     songs_data = []
     for song in songs:
         ts = parse_iso_timestamp(song['timestamp'])
-        ts_formatted = ts.strftime('%Y-%m-%d %H:%M:%S') if ts else song['timestamp']
+        # Format: "10:46, 2 Feb 2026" (use %#d for Windows, %d and strip for others)
+        if ts:
+            ts_formatted = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ')
+        else:
+            ts_formatted = song['timestamp']
         songs_data.append({
             'station': song['station'],
             'artist': song['artist'],
