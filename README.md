@@ -152,9 +152,9 @@ nohup python web_app.py > dashboard.log 2>&1 &
 - **requests** - HTTP library for fetching relisten.nl
 - **BeautifulSoup4** - HTML parsing
 - **flask** - Lightweight web framework
-- **Pico CSS** - Minimal classless CSS (~2.5KB, served via CDN)
+- **Inline CSS** - Minimal styling (no external dependencies)
 - **sqlite3** - Built-in database
 - **colorama** - Cross-platform colored terminal output
 
-**Total dependencies: 4 lightweight pure-Python packages** (no Selenium, no Chromium, no JavaScript rendering)
+**Total dependencies: 4 lightweight pure-Python packages** (no Selenium, no Chromium, no JavaScript rendering, no external CSS)
 
