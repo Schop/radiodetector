@@ -27,6 +27,63 @@ def get_timestamp():
     """Get current time in HH:mm format"""
     return datetime.now().strftime('%H:%M')
 
+def fetch_icy_metadata_from_stream(stream_url, station_name):
+    """Extract ICY metadata from streaming server"""
+    try:
+        headers = {'Icy-MetaData': '1'}
+        response = requests.get(stream_url, timeout=10, headers=headers, stream=True)
+        
+        if response.status_code != 200:
+            return None
+        
+        icy_metaint = int(response.headers.get('icy-metaint', 0))
+        if icy_metaint == 0:
+            return None
+        
+        # Read audio data until we hit a metadata block
+        bytes_read = 0
+        for chunk in response.iter_content(chunk_size=4096):
+            if not chunk:
+                break
+            
+            bytes_read += len(chunk)
+            
+            if bytes_read >= icy_metaint:
+                # We've reached metadata
+                remainder = len(chunk) - (bytes_read - icy_metaint)
+                metadata_chunk = chunk[remainder:]
+                
+                if metadata_chunk:
+                    # First byte is length (in 16-byte blocks)
+                    metadata_length = metadata_chunk[0] * 16
+                    if metadata_length > 0:
+                        metadata = metadata_chunk[1:1+metadata_length].decode('utf-8', errors='ignore').strip('\x00')
+                        
+                        # Parse StreamTitle from metadata
+                        if 'StreamTitle=' in metadata:
+                            title_part = metadata.split("StreamTitle='")[1].split("'")[0]
+                            
+                            # Skip ads and empty titles
+                            if title_part and title_part.strip() and 'adw_ad' not in metadata.lower():
+                                # Try to parse "artist - song" format
+                                if ' - ' in title_part:
+                                    parts = title_part.split(' - ', 1)
+                                    artist = parts[0].strip()
+                                    song = parts[1].strip()
+                                    return (artist, song)
+                                else:
+                                    # If no dash separator, treat whole thing as song (no artist)
+                                    return ('Unknown', title_part.strip())
+                
+                break
+        
+        return None
+    
+    except Exception as e:
+        print(f"Error fetching ICY metadata from {station_name}: {e}")
+        return None
+
+
 def fetch_all_stations_from_relisten():
     """Fetch and parse all stations from https://www.relisten.nl/"""
     try:
@@ -86,6 +143,7 @@ def main():
     """Main loop - Monitor Dutch radio stations for target artists"""
     print("Initializing radio checker...")
     print("- Monitoring 19 stations from relisten.nl")
+    print("- Monitoring joe.nl (via stream metadata)")
     print("- Logging Phil Collins and Genesis songs")
     print("=" * 60)
     
@@ -94,8 +152,13 @@ def main():
     
     try:
         while True:
-            # Fetch all real-time playlist data
+            # Fetch all real-time playlist data from relisten.nl
             stations_data = fetch_all_stations_from_relisten()
+            
+            # Fetch metadata from joe.nl stream (MP3)
+            metadata = fetch_icy_metadata_from_stream('https://stream.joe.nl/joe/mp3', 'joe.nl')
+            if metadata:
+                stations_data['joe.nl'] = metadata
             
             if not stations_data:
                 print("Warning: No station data retrieved")
