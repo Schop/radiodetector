@@ -1,10 +1,10 @@
 # Station Configuration Guide
 
-Station configurations are stored in `stations.yaml` which supports comments with `#`.
+Station configurations are stored in `config.yaml` which supports comments with `#`.
 
 ## YAML Format
 
-**stations.yaml** makes it easy to temporarily disable stations by commenting them out:
+**config.yaml** makes it easy to temporarily disable stations by commenting them out:
 
 ```yaml
 # Radio Station Configuration

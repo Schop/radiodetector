@@ -23,34 +23,30 @@ c.execute('''CREATE TABLE IF NOT EXISTS songs (
 )''')
 conn.commit()
 
-# Artists to check
-TARGET_ARTISTS = ['Phil Collins', 'Genesis']
-
-# Song titles to check (case-insensitive matching)
-# Examples: TARGET_SONGS = ['In The Air Tonight', 'Another Day in Paradise', 'Land of Confusion']
-TARGET_SONGS = []
-
 # Load station mappings from YAML file
 def load_station_config():
-    """Load station mappings from stations.yaml"""
-    config_path = os.path.join(os.path.dirname(__file__), 'stations.yaml')
+    """Load station mappings from config.yaml"""
+    config_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
             config = yaml.safe_load(f)
             return config
     except FileNotFoundError:
-        print(f"{Fore.RED}Error: stations.yaml not found{Style.RESET_ALL}")
-        return {'relisten': {}, 'myonlineradio': {}, 'priority_stations': []}
+        print(f"{Fore.RED}Error: config.yaml not found{Style.RESET_ALL}")
+        return {'relisten': {}, 'myonlineradio': {}}
     except yaml.YAMLError as e:
-        print(f"{Fore.RED}Error parsing stations.yaml: {e}{Style.RESET_ALL}")
-        return {'relisten': {}, 'myonlineradio': {}, 'priority_stations': []}
+        print(f"{Fore.RED}Error parsing config.yaml: {e}{Style.RESET_ALL}")
+        return {'relisten': {}, 'myonlineradio': {}}
 
 # Load configuration
 STATION_CONFIG = load_station_config()
 # Convert all relisten keys to strings to handle numeric station names like "538"
+
+# Load target artists and songs from config
+TARGET_ARTISTS = STATION_CONFIG.get('target_artists', [])
+TARGET_SONGS = STATION_CONFIG.get('target_songs', [])
 RELISTEN_STATIONS = {str(k): v for k, v in STATION_CONFIG.get('relisten', {}).items()}
 ALL_MYONLINERADIO_STATIONS = STATION_CONFIG['myonlineradio']
-PRIORITY_STATIONS = STATION_CONFIG['priority_stations']
 
 # Filter out myonlineradio stations that are already in relisten (to avoid duplicates and reduce fetching)
 # This reduces 89 stations to only unique ones not available on relisten.nl
@@ -270,9 +266,6 @@ def main():
             
             # Fetch from myonlineradio.nl (individual station playlists)
             if MYONLINERADIO_STATIONS:
-                print(f"{Fore.CYAN}Fetching {len(MYONLINERADIO_STATIONS)} stations from myonlineradio.nl...{Style.RESET_ALL}")
-                myonline_fetched = 0
-                myonline_failed = 0
                 for station_name, slug in list(MYONLINERADIO_STATIONS.items())[:10]:  # Limit to first 10 for testing
                     # Skip if already fetched from relisten (avoid duplicates)
                     if station_name in stations_data:
@@ -281,15 +274,14 @@ def main():
                     result = fetch_station_from_myonlineradio(slug)
                     if result:
                         stations_data[station_name] = result
-                        myonline_fetched += 1
-                    else:
-                        myonline_failed += 1
-                print(f"{Fore.CYAN}Myonlineradio: {myonline_fetched} fetched, {myonline_failed} failed{Style.RESET_ALL}")
             
             if not stations_data:
                 print(f"{Fore.RED}Warning: No station data retrieved from any source{Style.RESET_ALL}")
                 time.sleep(60)
                 continue
+            
+            # Track if any songs changed in this iteration
+            songs_changed = 0
             
             # Process each station
             for station in sorted(stations_data.keys()):
@@ -307,8 +299,8 @@ def main():
                     # Check if this is different from last known song (using song key)
                     if station not in last_songs or last_songs[station] != song_key:
                         ts = get_timestamp()
-                        print(f"[{ts}] [{station}] {normalized_song_info}")
                         last_songs[station] = song_key
+                        songs_changed += 1
                         
                         # Check if artist is in target list
                         matched = False
@@ -324,7 +316,7 @@ def main():
                                     matched = True
                                     break
                         
-                        # Log to database if matched
+                        # Log to database and print if matched
                         if matched:
                             # Log to database (store normalized song title)
                             timestamp = datetime.now().isoformat()
@@ -332,11 +324,21 @@ def main():
                                       (station, normalized_song, normalized_artist, timestamp))
                             conn.commit()
                             
+                            # Beep to alert user (works on Windows and Linux)
+                            print('\a', end='', flush=True)
+                            
                             # Print with red warning and timestamp
-                            ts = get_timestamp()
-                            print(f"{Fore.RED}{Style.BRIGHT}[{ts}] [{station}]{normalized_artist} - {normalized_song} {Style.RESET_ALL}")
+                            print(f"{Fore.RED}{Style.BRIGHT}[{ts}] [{station}] {normalized_song_info} {Style.RESET_ALL}")
+                        else:
+                            # Print normally for non-matching songs
+                            print(f"[{ts}] [{station}] {normalized_song_info}")
+            
+            # Print status message
+            if songs_changed == 0:
+                print(f"{Fore.CYAN}No song changes detected{Style.RESET_ALL}")
             
             # Wait 60 seconds before next check
+            print(f"{Fore.CYAN}Waiting 60 seconds to update the list again...{Style.RESET_ALL}")
             time.sleep(60)
     
     except KeyboardInterrupt:

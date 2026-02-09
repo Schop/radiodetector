@@ -1,6 +1,15 @@
 # Radio Station Configuration
 # Comment out stations with # to disable them
 
+# Target artists and songs to check
+target_artists:
+  - Phil Collins
+  - Genesis
+  - Bad Bunny
+
+target_songs:
+  - Africa
+
 relisten:
   SLAM!: slam
   Radio 538: 538
@@ -13,10 +22,7 @@ relisten:
   FunX: funx
   Arrow Classic Rock: arrow
   RadioNL: radionl
-  Simone FM: simonefm
   NPO Radio 1: radio1
-  Sublime FM: sublimefm
-  Radio Decibel: decibel
   NPO Radio 2: radio2
   # Note: Homepage rotates ~19 stations at a time
 
@@ -35,28 +41,7 @@ myonlineradio:
   RadioNL: radionl
   Sky Radio: sky-radio
   SLAM!: slam
-  Sublime FM: sublime
   Radio Veronica: veronica
   All Time Hits: all-time-hits
   KISS FM: kiss-fm
   We Are The Beat: we-are-the-beat
-  
-priority_stations:
-  - 100% NL
-  - Arrow Classic Rock
-  - Decibel
-  - FunX
-  - JOE
-  - KINK
-  - NPO 3FM
-  - NPO Radio 1
-  - NPO Radio 2
-  - NPO Radio 5
-  - Q Music
-  - Radio 10
-  - Radio 538
-  - RadioNL
-  - Sky Radio
-  - SLAM!
-  - Sublime
-  - Veronica

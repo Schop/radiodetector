@@ -16,7 +16,7 @@ A Python script that monitors Dutch radio stations for songs by target artists (
 
 ### Station Mappings
 
-Station configurations are stored in [`stations.yaml`](stations.yaml):
+Station configurations are stored in [`config.yaml`](config.yaml):
 
 ```yaml
 # Comment out stations with # to disable them
