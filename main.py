@@ -257,16 +257,23 @@ def main():
     try:
         while True:
             stations_data = {}
+            relisten_failed = False
             
             # Fetch from relisten.nl (homepage scraping)
             if RELISTEN_STATIONS:
                 relisten_data = fetch_all_stations_from_relisten()
                 if relisten_data:
                     stations_data.update(relisten_data)
+                else:
+                    relisten_failed = True
             
             # Fetch from myonlineradio.nl (individual station playlists)
-            if MYONLINERADIO_STATIONS:
-                for station_name, slug in list(MYONLINERADIO_STATIONS.items())[:10]:  # Limit to first 10 for testing
+            # If relisten failed, use ALL myonlineradio stations (including duplicates)
+            # Otherwise use only unique stations to avoid redundant checks
+            myonline_stations_to_check = ALL_MYONLINERADIO_STATIONS if relisten_failed else MYONLINERADIO_STATIONS
+            
+            if myonline_stations_to_check:
+                for station_name, slug in myonline_stations_to_check.items():
                     # Skip if already fetched from relisten (avoid duplicates)
                     if station_name in stations_data:
                         continue
