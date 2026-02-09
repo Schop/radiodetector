@@ -23,6 +23,10 @@ conn.commit()
 # Artists to check
 TARGET_ARTISTS = ['Phil Collins', 'Genesis']
 
+def get_timestamp():
+    """Get current time in HH:mm format"""
+    return datetime.now().strftime('%H:%M')
+
 def fetch_all_stations_from_relisten():
     """Fetch and parse all stations from https://www.relisten.nl/"""
     try:
@@ -108,7 +112,8 @@ def main():
                     
                     # Check if this is different from last known song
                     if station not in last_songs or last_songs[station] != song_info:
-                        print(f"[{station}] Now playing: {song_info}")
+                        ts = get_timestamp()
+                        print(f"[{ts}] [{station}] {song_info}")
                         last_songs[station] = song_info
                         
                         # Check if artist is in target list
@@ -120,8 +125,9 @@ def main():
                                           (station, song, artist, timestamp))
                                 conn.commit()
                                 
-                                # Print with red warning
-                                print(f"{Fore.RED}{Style.BRIGHT}>>> FOUND TARGET ARTIST: {artist} - {song} on {station}{Style.RESET_ALL}")
+                                # Print with red warning and timestamp
+                                ts = get_timestamp()
+                                print(f"{Fore.RED}{Style.BRIGHT}[{ts}] ✓ {artist} - {song} ({station}){Style.RESET_ALL}")
                                 break
             
             # Wait 60 seconds before next check
