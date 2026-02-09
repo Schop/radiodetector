@@ -37,11 +37,10 @@ myonlineradio:
   RadioNL: radionl
   Sky Radio: sky-radio
   SLAM!: slam
-  Sublime: sublime
+  Sublime FM: sublime
   Veronica: veronica
   All Time Hits: all-time-hits
   KISS FM: kiss-fm
-  Simone FM: simone-fm
   We Are The Beat: we-are-the-beat
   
 priority_stations:
@@ -56,8 +55,6 @@ priority_stations:
   - NPO Radio 2
   - NPO Radio 5
   - Q Music
-  - Q Music Foute UUR
-  - Q Music Non Stop
   - Radio 10
   - Radio 538
   - RadioNL
@@ -65,5 +62,3 @@ priority_stations:
   - SLAM!
   - Sublime
   - Veronica
-  - Simone FM
-  - Joy Radio
