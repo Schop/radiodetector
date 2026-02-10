@@ -24,13 +24,10 @@ def log_print(message, color='', style=''):
     else:
         print(message)
     
-    # Write to log file without color codes
+    # Write to log file without color codes or additional timestamps
     try:
         with open(LOG_FILE, 'a', encoding='utf-8') as f:
-            timestamp = datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
-            # Remove color codes for log file
-            clean_message = message
-            f.write(f"{timestamp} {clean_message}\n")
+            f.write(f"{message}\n")
             f.flush()
     except Exception as e:
         print(f"Error writing to log: {e}", file=sys.stderr)
