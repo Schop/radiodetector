@@ -2,9 +2,9 @@
 Script to normalize existing artist and song titles in the database
 Applies the same normalization rules to eliminate duplicates from case variations
 """
-import sqlite3
 import re
 from colorama import Fore, Style, init
+import db_connection as db
 
 # Initialize colorama
 init(autoreset=True)
@@ -34,11 +34,11 @@ def normalize_song_title(title):
 
 def normalize_database():
     """Normalize all artist and song entries in the database"""
-    conn = sqlite3.connect('radio_songs.db')
+    conn, db_type = db.get_connection()
     c = conn.cursor()
     
     # Get all songs
-    c.execute("SELECT id, artist, song FROM songs")
+    db.execute_query(c, "SELECT id, artist, song FROM songs", db_type=db_type)
     songs = c.fetchall()
     
     print(f"{Fore.CYAN}Found {len(songs)} entries in database")
@@ -55,9 +55,9 @@ def normalize_database():
         # Check if anything changed
         if artist != normalized_artist or song != normalized_song:
             # Update the record
-            c.execute(
+            db.execute_query(c,
                 "UPDATE songs SET artist = ?, song = ? WHERE id = ?",
-                (normalized_artist, normalized_song, song_id)
+                (normalized_artist, normalized_song, song_id), db_type
             )
             updated_count += 1
             

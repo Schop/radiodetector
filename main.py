@@ -1,4 +1,3 @@
-import sqlite3
 import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
@@ -8,6 +7,7 @@ import os
 import yaml
 import sys
 from colorama import Fore, Style, init
+import db_connection as db
 
 # Initialize colorama for cross-platform colored terminal output
 init(autoreset=True)
@@ -36,49 +36,22 @@ def log_print(message, color='', style=''):
             print(f"Warning: Could not write to log file: {e}")
 
 # Database setup
-conn = sqlite3.connect('radio_songs.db')
-c = conn.cursor()
+db_type = db.init_database()
+log_print(f"Using {db_type.upper()} database", Fore.CYAN)
 
-# Create songs table
-c.execute('''CREATE TABLE IF NOT EXISTS songs (
-    id INTEGER PRIMARY KEY,
-    station TEXT,
-    song TEXT,
-    artist TEXT,
-    timestamp TEXT
-)''')
-
-# Create settings table
-c.execute('''CREATE TABLE IF NOT EXISTS settings (
-    key TEXT PRIMARY KEY,
-    value TEXT,
-    updated_at TEXT
-)''')
-
-# Create stations table
-c.execute('''CREATE TABLE IF NOT EXISTS stations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    slug TEXT NOT NULL,
-    source TEXT NOT NULL,
-    enabled INTEGER DEFAULT 1,
-    priority INTEGER DEFAULT 0,
-    updated_at TEXT,
-    UNIQUE(name, source)
-)''')
-
-conn.commit()
+# Get persistent connection
+conn, db_type = db.get_connection()
 
 def migrate_database():
     """Check database schema version and perform migrations"""
     c = conn.cursor()
     
     # Check if settings table exists and has data
-    c.execute("SELECT COUNT(*) FROM settings")
+    db.execute_query(c, "SELECT COUNT(*) FROM settings", db_type=db_type)
     settings_count = c.fetchone()[0]
     
     # Check if stations table has data
-    c.execute("SELECT COUNT(*) FROM stations")
+    db.execute_query(c, "SELECT COUNT(*) FROM stations", db_type=db_type)
     stations_count = c.fetchone()[0]
     
     # If tables are empty, migrate from config.yaml
@@ -98,8 +71,8 @@ def migrate_database():
             ]
             
             for key, value in settings_to_migrate:
-                c.execute("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
-                         (key, value, timestamp))
+                db.execute_query(c, "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
+                         (key, value, timestamp), db_type)
         
         # Import stations into stations table
         if stations_count == 0:
@@ -119,10 +92,9 @@ def migrate_database():
             for name, slug in config.get('playlist24', {}).items():
                 stations_to_migrate.append((name, slug, 'playlist24', 1, 0, timestamp))
             
-            c.executemany(
+            db.executemany_query(c,
                 "INSERT OR IGNORE INTO stations (name, slug, source, enabled, priority, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-                stations_to_migrate
-            )
+                stations_to_migrate, db_type)
         
         conn.commit()
         log_print("Configuration migration completed!", Fore.GREEN)
@@ -152,7 +124,7 @@ def load_station_config():
     settings_keys = ['target_artists', 'target_songs', 'priority_myonlineradio']
     
     for key in settings_keys:
-        c.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        db.execute_query(c, "SELECT value FROM settings WHERE key = ?", (key,), db_type)
         row = c.fetchone()
         if row:
             try:
@@ -163,7 +135,7 @@ def load_station_config():
             config[key] = []
     
     # Load stations from stations table
-    c.execute("SELECT name, slug, source FROM stations WHERE enabled = 1")
+    db.execute_query(c, "SELECT name, slug, source FROM stations WHERE enabled = 1", db_type=db_type)
     stations = c.fetchall()
     
     config['relisten'] = {}
@@ -558,7 +530,7 @@ def main():
             settings_check_counter += 1
             if settings_check_counter >= 5:
                 settings_check_counter = 0
-                c.execute("SELECT MAX(updated_at) FROM settings")
+                db.execute_query(c, "SELECT MAX(updated_at) FROM settings", db_type=db_type)
                 latest_update = c.fetchone()[0]
                 if last_settings_check is None:
                     last_settings_check = latest_update
@@ -664,8 +636,8 @@ def main():
                         if matched:
                             # Log to database (store normalized song title)
                             timestamp = datetime.now().isoformat()
-                            c.execute("INSERT INTO songs (station, song, artist, timestamp) VALUES (?, ?, ?, ?)",
-                                      (station, normalized_song, normalized_artist, timestamp))
+                            db.execute_query(c, "INSERT INTO songs (station, song, artist, timestamp) VALUES (?, ?, ?, ?)",
+                                      (station, normalized_song, normalized_artist, timestamp), db_type)
                             conn.commit()
                             
                             # Beep to alert user (works on Windows and Linux)

@@ -6,10 +6,10 @@ Lightweight and Pi Zero friendly
 
 from flask import Flask, render_template, request, jsonify
 from datetime import datetime, timedelta
-import sqlite3
 import os
 import platform
 import json
+import db_connection as db
 
 app = Flask(__name__)
 DB_PATH = 'radio_songs.db'
@@ -18,16 +18,15 @@ UPTIME_FILE = '.uptime'
 
 def get_db_connection():
     """Create database connection"""
-    conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    return conn
+    conn, db_type = db.get_dict_connection()
+    return conn, db_type
 
 def get_setting(key, default=None):
     """Get a setting value from database"""
     try:
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        conn, db_type = get_db_connection()
+        c = db.get_dict_cursor(conn, db_type)
+        db.execute_query(c, "SELECT value FROM settings WHERE key = ?", (key,), db_type)
         row = c.fetchone()
         conn.close()
         
@@ -47,15 +46,15 @@ def parse_iso_timestamp(iso_string):
 @app.route('/')
 def index():
     """Main page - display all detected songs"""
-    conn = get_db_connection()
-    c = conn.cursor()
+    conn, db_type = get_db_connection()
+    c = db.get_dict_cursor(conn, db_type)
     
     # Get all songs (DataTables will handle filtering client-side)
-    c.execute("SELECT * FROM songs ORDER BY timestamp DESC LIMIT 1000")
+    db.execute_query(c, "SELECT * FROM songs ORDER BY timestamp DESC LIMIT 1000", db_type=db_type)
     songs = c.fetchall()
     
     # Get unique stations
-    c.execute("SELECT DISTINCT station FROM songs ORDER BY station")
+    db.execute_query(c, "SELECT DISTINCT station FROM songs ORDER BY station", db_type=db_type)
     stations = [row['station'] for row in c.fetchall()]
     
     conn.close()
@@ -93,11 +92,11 @@ def index():
 @app.route('/station/<station_name>')
 def station_detail(station_name):
     """Station detail page - show all songs detected from this station"""
-    conn = get_db_connection()
-    c = conn.cursor()
+    conn, db_type = get_db_connection()
+    c = db.get_dict_cursor(conn, db_type)
     
     # Get all songs from this station
-    c.execute("SELECT * FROM songs WHERE station = ? ORDER BY timestamp DESC", (station_name,))
+    db.execute_query(c, "SELECT * FROM songs WHERE station = ? ORDER BY timestamp DESC", (station_name,), db_type)
     songs = c.fetchall()
     
     # Get total count
@@ -142,8 +141,8 @@ def station_detail(station_name):
 @app.route('/song/<path:song_name>')
 def song_detail(song_name):
     """Song detail page - show all stations that played this song"""
-    conn = get_db_connection()
-    c = conn.cursor()
+    conn, db_type = get_db_connection()
+    c = db.get_dict_cursor(conn, db_type)
     
     # Get all detections of this song
     c.execute("SELECT * FROM songs WHERE song = ? ORDER BY timestamp DESC", (song_name,))
@@ -200,8 +199,8 @@ def song_detail(song_name):
 @app.route('/artist/<path:artist_name>')
 def artist_detail(artist_name):
     """Artist detail page - show all songs and stations for this artist"""
-    conn = get_db_connection()
-    c = conn.cursor()
+    conn, db_type = get_db_connection()
+    c = db.get_dict_cursor(conn, db_type)
     
     # Get all detections for this artist
     c.execute("SELECT * FROM songs WHERE artist = ? ORDER BY timestamp DESC", (artist_name,))
@@ -263,8 +262,8 @@ def artist_detail(artist_name):
 @app.route('/api/chart-data')
 def chart_data():
     """JSON API for chart data (lightweight for Pi Zero)"""
-    conn = get_db_connection()
-    c = conn.cursor()
+    conn, db_type = get_db_connection()
+    c = db.get_dict_cursor(conn, db_type)
     
     # Songs per station (top 10)
     c.execute("""
@@ -277,7 +276,7 @@ def chart_data():
     stations_data = c.fetchall()
     
     # Songs by hour of day
-    c.execute("SELECT timestamp FROM songs")
+    db.execute_query(c, SELECT timestamp FROM songs", db_type=db_type)
     all_songs = c.fetchall()
     
     hours = [0] * 24
@@ -327,8 +326,8 @@ def chart_data():
 @app.route('/api/station/<station_name>/charts')
 def station_charts(station_name):
     """Get chart data for a specific station (hourly and weekday distribution)"""
-    conn = get_db_connection()
-    c = conn.cursor()
+    conn, db_type = get_db_connection()
+    c = db.get_dict_cursor(conn, db_type)
     
     # Get all timestamps for this station
     c.execute("SELECT timestamp FROM songs WHERE station = ?", (station_name,))
@@ -361,8 +360,8 @@ def station_charts(station_name):
 @app.route('/api/song/<path:song_name>/charts')
 def song_charts(song_name):
     """Get chart data for a specific song (hourly and weekday distribution)"""
-    conn = get_db_connection()
-    c = conn.cursor()
+    conn, db_type = get_db_connection()
+    c = db.get_dict_cursor(conn, db_type)
     
     # Get all timestamps for this song
     c.execute("SELECT timestamp FROM songs WHERE song = ?", (song_name,))
@@ -395,8 +394,8 @@ def song_charts(song_name):
 @app.route('/api/artist/<path:artist_name>/charts')
 def artist_charts(artist_name):
     """Get chart data for a specific artist (songs, stations, hourly and weekday distribution)"""
-    conn = get_db_connection()
-    c = conn.cursor()
+    conn, db_type = get_db_connection()
+    c = db.get_dict_cursor(conn, db_type)
     
     # Get all timestamps for this artist
     c.execute("SELECT timestamp FROM songs WHERE artist = ?", (artist_name,))
@@ -463,9 +462,9 @@ def export_csv():
     import csv
     import io
     
-    conn = get_db_connection()
-    c = conn.cursor()
-    c.execute("SELECT station, artist, song, timestamp FROM songs ORDER BY timestamp DESC")
+    conn, db_type = get_db_connection()
+    c = db.get_dict_cursor(conn, db_type)
+    db.execute_query(c, SELECT station, artist, song, timestamp FROM songs ORDER BY timestamp DESC", db_type=db_type)
     rows = c.fetchall()
     conn.close()
     
@@ -562,11 +561,11 @@ def get_uptime():
 @app.route('/admin')
 def admin_page():
     """Database maintenance page - browse, edit, delete entries"""
-    conn = get_db_connection()
-    c = conn.cursor()
+    conn, db_type = get_db_connection()
+    c = db.get_dict_cursor(conn, db_type)
     
     # Get all songs (DataTables will handle filtering/pagination client-side)
-    c.execute("SELECT * FROM songs ORDER BY timestamp DESC")
+    db.execute_query(c, SELECT * FROM songs ORDER BY timestamp DESC", db_type=db_type)
     songs = c.fetchall()
     
     conn.close()
@@ -598,8 +597,8 @@ def admin_page():
 def delete_song(song_id):
     """Delete a song entry"""
     try:
-        conn = get_db_connection()
-        c = conn.cursor()
+        conn, db_type = get_db_connection()
+        c = db.get_dict_cursor(conn, db_type)
         c.execute("DELETE FROM songs WHERE id = ?", (song_id,))
         conn.commit()
         conn.close()
@@ -630,8 +629,8 @@ def edit_song(song_id):
                 'error': 'All fields are required'
             }), 400
         
-        conn = get_db_connection()
-        c = conn.cursor()
+        conn, db_type = get_db_connection()
+        c = db.get_dict_cursor(conn, db_type)
         c.execute("""
             UPDATE songs 
             SET station = ?, artist = ?, song = ?, timestamp = ?
@@ -654,8 +653,8 @@ def edit_song(song_id):
 def settings_page():
     """Settings management page"""
     import json
-    conn = get_db_connection()
-    c = conn.cursor()
+    conn, db_type = get_db_connection()
+    c = db.get_dict_cursor(conn, db_type)
     
     # Load simple settings from settings table
     settings = {}
@@ -673,7 +672,7 @@ def settings_page():
             settings[key] = []
     
     # Load stations from stations table
-    c.execute("SELECT id, name, slug, source, enabled, priority FROM stations ORDER BY source, name")
+    db.execute_query(c, SELECT id, name, slug, source, enabled, priority FROM stations ORDER BY source, name", db_type=db_type)
     stations_rows = c.fetchall()
     
     # Organize stations by source
@@ -702,8 +701,8 @@ def settings_page():
 def get_setting_api(key):
     """Get a specific setting"""
     import json
-    conn = get_db_connection()
-    c = conn.cursor()
+    conn, db_type = get_db_connection()
+    c = db.get_dict_cursor(conn, db_type)
     
     c.execute("SELECT value FROM settings WHERE key = ?", (key,))
     row = c.fetchone()
@@ -736,14 +735,14 @@ def update_setting(key):
         if key not in valid_keys:
             return jsonify({'success': False, 'error': 'Invalid setting key'}), 400
         
-        conn = get_db_connection()
-        c = conn.cursor()
+        conn, db_type = get_db_connection()
+        c = db.get_dict_cursor(conn, db_type)
         
         timestamp = datetime.now().isoformat()
         json_value = json.dumps(value)
         
-        c.execute("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
-                 (key, json_value, timestamp))
+        db.execute_query(c, "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
+                 (key, json_value, timestamp), db_type)
         conn.commit()
         conn.close()
         
@@ -761,9 +760,9 @@ def update_setting(key):
 def get_stations():
     """Get all stations"""
     try:
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute("SELECT id, name, slug, source, enabled, priority FROM stations ORDER BY source, name")
+        conn, db_type = get_db_connection()
+        c = db.get_dict_cursor(conn, db_type)
+        db.execute_query(c, SELECT id, name, slug, source, enabled, priority FROM stations ORDER BY source, name", db_type=db_type)
         stations = [dict(row) for row in c.fetchall()]
         conn.close()
         
@@ -775,8 +774,8 @@ def get_stations():
 def toggle_station(station_id):
     """Toggle station enabled/disabled"""
     try:
-        conn = get_db_connection()
-        c = conn.cursor()
+        conn, db_type = get_db_connection()
+        c = db.get_dict_cursor(conn, db_type)
         
         # Toggle enabled status
         c.execute("UPDATE stations SET enabled = 1 - enabled, updated_at = ? WHERE id = ?",
@@ -799,8 +798,8 @@ def toggle_station(station_id):
 def toggle_station_priority(station_id):
     """Toggle station priority"""
     try:
-        conn = get_db_connection()
-        c = conn.cursor()
+        conn, db_type = get_db_connection()
+        c = db.get_dict_cursor(conn, db_type)
         
         # Toggle priority status
         c.execute("UPDATE stations SET priority = 1 - priority, updated_at = ? WHERE id = ?",
@@ -834,8 +833,8 @@ def add_station():
         if source not in ['relisten', 'myonlineradio', 'playlist24']:
             return jsonify({'success': False, 'error': 'Invalid source'}), 400
         
-        conn = get_db_connection()
-        c = conn.cursor()
+        conn, db_type = get_db_connection()
+        c = db.get_dict_cursor(conn, db_type)
         
         timestamp = datetime.now().isoformat()
         c.execute(
@@ -860,8 +859,8 @@ def add_station():
 def delete_station(station_id):
     """Delete a station"""
     try:
-        conn = get_db_connection()
-        c = conn.cursor()
+        conn, db_type = get_db_connection()
+        c = db.get_dict_cursor(conn, db_type)
         c.execute("DELETE FROM stations WHERE id = ?", (station_id,))
         conn.commit()
         conn.close()

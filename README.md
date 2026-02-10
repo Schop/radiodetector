@@ -14,9 +14,18 @@ A Python script that monitors Dutch radio stations for songs by target artists (
 
 ## Configuration
 
+### Initial Setup
+
+Before running the application, copy the example configuration:
+```bash
+cp config.yaml.example config.yaml
+```
+
+Then edit `config.yaml` with your preferred settings.
+
 ### Station Mappings
 
-Station configurations are stored in [`config.yaml`](config.yaml):
+Station configurations are stored in `config.yaml`:
 
 ```yaml
 # Comment out stations with # to disable them
@@ -64,6 +73,17 @@ See [STATIONS.md](STATIONS.md) for detailed documentation.
    ```bash
    pip install -r requirements.txt
    ```
+4. **Set up configuration:**
+   ```bash
+   # Copy the example config file
+   cp config.yaml.example config.yaml
+   
+   # Edit config.yaml with your settings
+   # For SQLite (default): No changes needed
+   # For MySQL: Update database credentials
+   ```
+   
+   ⚠️ **Important:** `config.yaml` contains credentials and is excluded from git. Never commit it!
 
 ## Usage
 
