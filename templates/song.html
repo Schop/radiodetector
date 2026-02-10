@@ -18,7 +18,7 @@
                 <div class="col-md-3">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h5 class="card-title">Statistics</h5>
+                            <h6 class="card-title">{{ song_name }} Statistics</h6>
                             <table class="compact-stats-table w-100">
                                 <tbody>
                                     <tr>
@@ -41,7 +41,7 @@
                 <div class="col-md-3">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h5 class="card-title">Stations Playing</h5>
+                            <h6 class="card-title">Stations Playing {{ song_name }}</h6>
                             <div style="height: 200px;">
                                 <canvas id="stationsChart"></canvas>
                             </div>
@@ -51,7 +51,7 @@
                 <div class="col-md-3">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h5 class="card-title">Hourly Distribution</h5>
+                            <h6 class="card-title">Hourly Distribution for {{ song_name }}</h6>
                             <div style="height: 200px;">
                                 <canvas id="hourlyChart"></canvas>
                             </div>
@@ -61,7 +61,7 @@
                 <div class="col-md-3">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h5 class="card-title">Weekday Distribution</h5>
+                            <h6 class="card-title">Weekday Distribution for {{ song_name }}</h6>
                             <div style="height: 200px;">
                                 <canvas id="weekdayChart"></canvas>
                             </div>

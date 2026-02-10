@@ -4,9 +4,12 @@
         <main>
             {% include 'includes/nav.html' %}
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 30px;">
-            <div>
-                <h1>Phil Collins Checker</h1>
-                <h3 class="">Tracking songs and artists across 19 Dutch radio stations</h3>
+            <div style="display: flex; gap: 20px; align-items: center;">
+                <img src="/static/images/phil.png" alt="Phil Collins" style="max-height: 8em; height: auto; width: auto; border-radius: 8px; object-fit: cover; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                <div>
+                    <h1>Phil Collins Checker</h1>
+                    <h3 class="">Tracking songs and artists across 19 Dutch radio stations</h3>
+                </div>
             </div>
             <div style="display: flex; gap: 20px; align-items: flex-start; flex-shrink: 0;">
                 <div class="tracking-list">
@@ -194,19 +197,20 @@
             <table id="songsTable" class="table table-striped table-hover display">
                 <thead class="table-light">
                     <tr>
+                        <th>Detected</th>
                         <th>Station</th>
                         <th>Artist</th>
                         <th>Song</th>
-                        <th>Detected</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for song in songs %}
                     <tr>
+                        <td class="timestamp" data-order="{{ song.timestamp_raw }}">{{ song.timestamp }}</td>
                         <td><a href="/station/{{ song.station }}" class="station-link">{{ song.station }}</a></td>
                         <td><span class="artist">{{ song.artist }}</span></td>
                         <td><a href="/song/{{ song.song }}" class="station-link">{{ song.song }}</a></td>
-                        <td class="timestamp" data-order="{{ song.timestamp_raw }}">{{ song.timestamp }}</td>
+                        
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -216,7 +220,7 @@
                 // Initialize DataTables with Pi Zero optimizations
                 $(document).ready(function() {
                     $('#songsTable').DataTable({
-                        order: [[3, 'desc']], // Sort by timestamp descending
+                        order: [[0, 'desc']], // Sort by timestamp descending
                         pageLength: 25,
                         lengthMenu: [[10, 25, 50, 100], [10, 25, 50, 100]],
                         responsive: true,
@@ -243,7 +247,7 @@
         
         <hr>
         <footer class="text-center text-muted">
-            <p>RadioDetector v1.0 • Monitoring relisten.nl • Page auto-refreshes every 5 minutes</p>
+            <p>Phil Collins Detector v1.0  • Page auto-refreshes every 5 minutes</p>
         </footer>
         </main>
     </div>
