@@ -146,8 +146,12 @@ table.dataTable thead th {
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  body {
+    padding: 10px;
+  }
+
   main {
-    padding: 20px;
+    padding: 15px;
   }
 
   main > div:first-child {
@@ -161,6 +165,56 @@ table.dataTable thead th {
   
   .stats-compact {
     margin-top: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .stat-card-small {
+    min-width: 80px;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+  }
+
+  h2 {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    font-size: 1rem;
+  }
+
+  .subtitle {
+    font-size: 0.9rem;
+  }
+
+  /* Make tables scrollable on mobile */
+  .table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better navbar on mobile */
+  .navbar-text {
+    margin-top: 10px;
+    display: block;
+  }
+
+  /* Fix header image overflow */
+  img {
+    max-width: 100%;
+    height: auto !important;
+  }
+
+  /* Stack tracking badges vertically on mobile */
+  .tracking-list {
+    width: 100%;
+  }
+
+  .tracking-badge {
+    display: block;
+    margin-bottom: 4px;
   }
 }
 
