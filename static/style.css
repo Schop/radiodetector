@@ -154,13 +154,20 @@ table.dataTable thead th {
     padding: 15px;
   }
 
-  main > div:first-child {
-    flex-direction: column;
+  /* Fix header layout on mobile */
+  main > div[style*="display: flex; justify-content: space-between"] {
+    flex-direction: column !important;
+    gap: 20px !important;
   }
-  
-  main > div:first-child > div:last-child {
-    flex-direction: column;
-    width: 100%;
+
+  main > div[style*="display: flex; justify-content: space-between"] > div {
+    flex-direction: column !important;
+    width: 100% !important;
+  }
+
+  main > div[style*="display: flex; justify-content: space-between"] > div > div {
+    flex-direction: column !important;
+    width: 100% !important;
   }
   
   .stats-compact {
@@ -205,15 +212,18 @@ table.dataTable thead th {
   img {
     max-width: 100%;
     height: auto !important;
+    max-height: 5em !important;
   }
 
   /* Stack tracking badges vertically on mobile */
   .tracking-list {
     width: 100%;
+    margin-bottom: 15px;
   }
 
   .tracking-badge {
-    display: block;
+    display: inline-block;
+    margin-right: 5px;
     margin-bottom: 4px;
   }
 }
