@@ -112,14 +112,17 @@ sudo systemctl restart radiochecker-web
 The code works on Windows too! Just run:
 
 ```powershell
-# Start the radio checker
+# Start the radio checker (output to console)
 python main.py
+
+# Or redirect to log file
+python main.py > radio.log 2>&1
 
 # In another terminal, start the web interface
 python web_app.py
 ```
 
-Logs are written to `radio.log` in the same directory.
+**Note:** When running manually, logs appear in the console. If you want to save them to a file, use output redirection as shown above.
 
 ## Log Files
 
