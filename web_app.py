@@ -276,7 +276,7 @@ def chart_data():
     stations_data = c.fetchall()
     
     # Songs by hour of day
-    db.execute_query(c, SELECT timestamp FROM songs", db_type=db_type)
+    db.execute_query(c, "SELECT timestamp FROM songs", db_type=db_type)
     all_songs = c.fetchall()
     
     hours = [0] * 24
@@ -464,7 +464,7 @@ def export_csv():
     
     conn, db_type = get_db_connection()
     c = db.get_dict_cursor(conn, db_type)
-    db.execute_query(c, SELECT station, artist, song, timestamp FROM songs ORDER BY timestamp DESC", db_type=db_type)
+    db.execute_query(c, "SELECT station, artist, song, timestamp FROM songs ORDER BY timestamp DESC", db_type=db_type)
     rows = c.fetchall()
     conn.close()
     
@@ -565,7 +565,7 @@ def admin_page():
     c = db.get_dict_cursor(conn, db_type)
     
     # Get all songs (DataTables will handle filtering/pagination client-side)
-    db.execute_query(c, SELECT * FROM songs ORDER BY timestamp DESC", db_type=db_type)
+    db.execute_query(c, "SELECT * FROM songs ORDER BY timestamp DESC", db_type=db_type)
     songs = c.fetchall()
     
     conn.close()
@@ -672,7 +672,7 @@ def settings_page():
             settings[key] = []
     
     # Load stations from stations table
-    db.execute_query(c, SELECT id, name, slug, source, enabled, priority FROM stations ORDER BY source, name", db_type=db_type)
+    db.execute_query(c, "SELECT id, name, slug, source, enabled, priority FROM stations ORDER BY source, name", db_type=db_type)
     stations_rows = c.fetchall()
     
     # Organize stations by source
@@ -762,7 +762,7 @@ def get_stations():
     try:
         conn, db_type = get_db_connection()
         c = db.get_dict_cursor(conn, db_type)
-        db.execute_query(c, SELECT id, name, slug, source, enabled, priority FROM stations ORDER BY source, name", db_type=db_type)
+        db.execute_query(c, "SELECT id, name, slug, source, enabled, priority FROM stations ORDER BY source, name", db_type=db_type)
         stations = [dict(row) for row in c.fetchall()]
         conn.close()
         
