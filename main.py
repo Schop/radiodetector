@@ -14,6 +14,7 @@ init(autoreset=True)
 
 # Log file path
 LOG_FILE = 'radio.log'
+UPTIME_FILE = '.uptime'
 
 def log_print(message, color='', style=''):
     """Print to console and log to file"""
@@ -331,6 +332,14 @@ def fetch_all_stations_from_relisten():
 
 def main():
     """Main loop - Monitor Dutch radio stations for target artists and songs"""
+    # Record start time for uptime tracking
+    start_time = datetime.now().isoformat()
+    try:
+        with open(UPTIME_FILE, 'w') as f:
+            f.write(start_time)
+    except Exception as e:
+        log_print(f"Warning: Could not write uptime file: {e}", Fore.YELLOW)
+    
     log_print("Initializing radio checker...")
     log_print(f"- Monitoring {len(RELISTEN_STATIONS)} stations from relisten.nl")
     log_print(f"- Monitoring {len(MYONLINERADIO_STATIONS)} unique stations from myonlineradio.nl (excluding duplicates)")

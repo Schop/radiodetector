@@ -5,6 +5,9 @@
 # Log files
 *.log
 
+# Runtime files
+.uptime
+
 # Python cache
 __pycache__/
 *.pyc

@@ -14,6 +14,7 @@ from main import TARGET_ARTISTS, TARGET_SONGS
 app = Flask(__name__)
 DB_PATH = 'radio_songs.db'
 LOG_FILE = 'radio.log'
+UPTIME_FILE = '.uptime'
 
 def get_db_connection():
     """Create database connection"""
@@ -222,6 +223,46 @@ def get_logs():
 def logs_page():
     """Display logs page"""
     return render_template('logs.html')
+
+@app.route('/api/uptime')
+def get_uptime():
+    """Get uptime of radio checker service"""
+    try:
+        if os.path.exists(UPTIME_FILE):
+            with open(UPTIME_FILE, 'r') as f:
+                start_time_str = f.read().strip()
+                start_time = datetime.fromisoformat(start_time_str)
+                uptime = datetime.now() - start_time
+                
+                # Format uptime
+                days = uptime.days
+                hours, remainder = divmod(uptime.seconds, 3600)
+                minutes, seconds = divmod(remainder, 60)
+                
+                if days > 0:
+                    uptime_str = f"{days}d {hours}h {minutes}m"
+                elif hours > 0:
+                    uptime_str = f"{hours}h {minutes}m"
+                else:
+                    uptime_str = f"{minutes}m {seconds}s"
+                
+                return jsonify({
+                    'success': True,
+                    'uptime': uptime_str,
+                    'start_time': start_time_str
+                })
+        else:
+            return jsonify({
+                'success': False,
+                'uptime': 'Unknown',
+                'error': 'Service not running'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'uptime': 'Error',
+            'error': str(e)
+        })
 
 if __name__ == '__main__':
     # Check if database exists

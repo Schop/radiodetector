@@ -1,0 +1,31 @@
+<nav>
+    <ul>
+        <li><a href="/" {% if request.path == '/' %}class="contrast"{% endif %}>Dashboard</a></li>
+        <li><a href="/logs" {% if request.path == '/logs' %}class="contrast"{% endif %}>Logs</a></li>
+    </ul>
+    <ul>
+        <li><small id="uptime" style="opacity: 0.7;">Uptime: ...</small></li>
+    </ul>
+</nav>
+<script>
+    // Update uptime periodically
+    function updateUptime() {
+        fetch('/api/uptime')
+            .then(response => response.json())
+            .then(data => {
+                const uptimeEl = document.getElementById('uptime');
+                if (data.success) {
+                    uptimeEl.textContent = `Uptime: ${data.uptime}`;
+                } else {
+                    uptimeEl.textContent = 'Uptime: Unknown';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching uptime:', error);
+            });
+    }
+    
+    // Update immediately and then every 10 seconds
+    updateUptime();
+    setInterval(updateUptime, 10000);
+</script>
