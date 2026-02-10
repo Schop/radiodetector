@@ -459,7 +459,7 @@ def fetch_all_stations_from_relisten():
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Dict to store station -> (artist, song) mapping
+        # Dict to store station -> (artist, song, source) mapping
         stations_data = {}
         
         # Get list of stations to monitor from config (use as filter)
@@ -499,8 +499,8 @@ def fetch_all_stations_from_relisten():
             if not artist or len(artist) < 2:
                 continue
             
-            # Store the station data
-            stations_data[station_name] = (artist, song)
+            # Store the station data with source
+            stations_data[station_name] = (artist, song, 'relisten.nl')
         
         return stations_data
     
@@ -562,7 +562,7 @@ def main():
                         slug = ALL_MYONLINERADIO_STATIONS[station_name]
                         result = fetch_station_from_myonlineradio(slug)
                         if result:
-                            stations_data[station_name] = result
+                            stations_data[station_name] = (result[0], result[1], 'myonlineradio.nl')
             
             # Fetch from relisten.nl (homepage scraping)
             if RELISTEN_STATIONS:
@@ -585,7 +585,7 @@ def main():
                     
                     result = fetch_station_from_myonlineradio(slug)
                     if result:
-                        stations_data[station_name] = result
+                        stations_data[station_name] = (result[0], result[1], 'myonlineradio.nl')
             
             # Fetch from playlist24.nl (individual station playlists)
             # If both relisten and myonlineradio failed or returned few results, try all playlist24 stations
@@ -601,7 +601,7 @@ def main():
                     
                     result = fetch_station_from_playlist24(slug)
                     if result:
-                        stations_data[station_name] = result
+                        stations_data[station_name] = (result[0], result[1], 'playlist24.nl')
             
             if not stations_data:
                 log_print(f"Warning: No station data retrieved from any source", Fore.RED)
@@ -613,7 +613,7 @@ def main():
             
             # Process each station
             for station in sorted(stations_data.keys()):
-                artist, song = stations_data[station]
+                artist, song, source = stations_data[station]
                 
                 if song and artist:
                     # Normalize song title (remove patterns like "#742: ")
@@ -656,10 +656,10 @@ def main():
                             print('\a', end='', flush=True)
                             
                             # Print with red warning and timestamp
-                            log_print(f"[{ts}] [{station}] {normalized_song_info}", Fore.RED, Style.BRIGHT)
+                            log_print(f"[{ts}] [{station}] [{source}] {normalized_song_info}", Fore.RED, Style.BRIGHT)
                         else:
                             # Print normally for non-matching songs
-                            log_print(f"[{ts}] [{station}] {normalized_song_info}")
+                            log_print(f"[{ts}] [{station}] [{source}] {normalized_song_info}")
             
             # Print status message
             if songs_changed == 0:
