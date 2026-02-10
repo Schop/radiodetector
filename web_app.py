@@ -197,6 +197,69 @@ def song_detail(song_name):
         title=f"Song: {song_name}"
     )
 
+@app.route('/artist/<path:artist_name>')
+def artist_detail(artist_name):
+    """Artist detail page - show all songs and stations for this artist"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Get all detections for this artist
+    c.execute("SELECT * FROM songs WHERE artist = ? ORDER BY timestamp DESC", (artist_name,))
+    songs = c.fetchall()
+    
+    # Get total count
+    total_detections = len(songs)
+    
+    # Get unique songs by this artist with counts
+    c.execute("""
+        SELECT song, COUNT(*) as count 
+        FROM songs 
+        WHERE artist = ? 
+        GROUP BY song 
+        ORDER BY count DESC
+    """, (artist_name,))
+    songs_data_counts = c.fetchall()
+    
+    # Get unique stations that played this artist
+    c.execute("SELECT DISTINCT station FROM songs WHERE artist = ? ORDER BY station", (artist_name,))
+    stations = [row['station'] for row in c.fetchall()]
+    
+    # Get unique song titles by this artist
+    c.execute("SELECT DISTINCT song FROM songs WHERE artist = ? ORDER BY song", (artist_name,))
+    song_titles = [row['song'] for row in c.fetchall()]
+    
+    conn.close()
+    
+    # Format timestamps
+    songs_data = []
+    for song in songs:
+        ts = parse_iso_timestamp(song['timestamp'])
+        if ts:
+            ts_formatted = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ')
+        else:
+            ts_formatted = song['timestamp']
+        songs_data.append({
+            'station': song['station'],
+            'artist': song['artist'],
+            'song': song['song'],
+            'timestamp': ts_formatted,
+            'timestamp_raw': song['timestamp']
+        })
+    
+    # Prepare song chart data
+    songs_list = [{'song': row['song'], 'count': row['count']} for row in songs_data_counts]
+    
+    return render_template(
+        'artist.html',
+        artist_name=artist_name,
+        songs=songs_data,
+        total_detections=total_detections,
+        stations=stations,
+        song_titles=song_titles,
+        songs_chart=songs_list,
+        title=f"Artist: {artist_name}"
+    )
+
 @app.route('/api/stats')
 def stats():
     """JSON API for statistics"""
@@ -345,6 +408,70 @@ def song_charts(song_name):
     day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
     
     return jsonify({
+        'hourly': {
+            'labels': [f"{h}:00" for h in range(24)],
+            'data': hours
+        },
+        'weekdays': {
+            'labels': day_names,
+            'data': weekdays
+        }
+    })
+
+@app.route('/api/artist/<path:artist_name>/charts')
+def artist_charts(artist_name):
+    """Get chart data for a specific artist (songs, stations, hourly and weekday distribution)"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Get all timestamps for this artist
+    c.execute("SELECT timestamp FROM songs WHERE artist = ?", (artist_name,))
+    songs = c.fetchall()
+    
+    # Get ALL songs by this artist (for the table)
+    c.execute("""
+        SELECT song, COUNT(*) as count 
+        FROM songs 
+        WHERE artist = ? 
+        GROUP BY song 
+        ORDER BY count DESC
+    """, (artist_name,))
+    all_songs = c.fetchall()
+    
+    # Get top stations playing this artist
+    c.execute("""
+        SELECT station, COUNT(*) as count 
+        FROM songs 
+        WHERE artist = ? 
+        GROUP BY station 
+        ORDER BY count DESC 
+        LIMIT 10
+    """, (artist_name,))
+    top_stations = c.fetchall()
+    
+    conn.close()
+    
+    # Count by hour and weekday
+    hours = [0] * 24
+    weekdays = [0] * 7
+    
+    for row in songs:
+        ts = parse_iso_timestamp(row['timestamp'])
+        if ts:
+            hours[ts.hour] += 1
+            weekdays[ts.weekday()] += 1
+    
+    day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    
+    return jsonify({
+        'songs': {
+            'labels': [row['song'] for row in all_songs],
+            'data': [row['count'] for row in all_songs]
+        },
+        'stations': {
+            'labels': [row['station'] for row in top_stations],
+            'data': [row['count'] for row in top_stations]
+        },
         'hourly': {
             'labels': [f"{h}:00" for h in range(24)],
             'data': hours

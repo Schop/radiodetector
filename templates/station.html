@@ -75,7 +75,7 @@
                 <tbody>
                     {% for song in songs %}
                     <tr>
-                        <td><span class="artist">{{ song.artist }}</span></td>
+                        <td><a href="/artist/{{ song.artist }}" class="station-link">{{ song.artist }}</a></td>
                         <td><a href="/song/{{ song.song }}" class="station-link">{{ song.song }}</a></td>
                         <td class="timestamp" data-order="{{ song.timestamp_raw }}">{{ song.timestamp }}</td>
                     </tr>

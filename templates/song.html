@@ -7,9 +7,9 @@
             <h1>{{ song_name }}</h1>
             <h3 class="text-muted mb-4">
                 {% if artists|length == 1 %}
-                    by {{ artists[0] }}
+                    by <a href="/artist/{{ artists[0] }}" class="station-link">{{ artists[0] }}</a>
                 {% elif artists|length > 1 %}
-                    by {{ artists|join(', ') }}
+                    by {% for artist in artists %}<a href="/artist/{{ artist }}" class="station-link">{{ artist }}</a>{% if not loop.last %}, {% endif %}{% endfor %}
                 {% endif %}
             </h3>
             
@@ -83,7 +83,7 @@
                     {% for song in songs %}
                     <tr>
                         <td><a href="/station/{{ song.station }}" class="station-link">{{ song.station }}</a></td>
-                        <td><span class="artist">{{ song.artist }}</span></td>
+                        <td><a href="/artist/{{ song.artist }}" class="station-link">{{ song.artist }}</a></td>
                         <td class="timestamp" data-order="{{ song.timestamp_raw }}">{{ song.timestamp }}</td>
                     </tr>
                     {% endfor %}
