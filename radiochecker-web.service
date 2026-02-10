@@ -6,12 +6,12 @@ Requires=radiochecker.service
 [Service]
 Type=simple
 User=schop
-WorkingDirectory=/home/schop/radiochecker
-ExecStart=/usr/bin/python3 /home/schop/radiochecker/web_app.py
+WorkingDirectory=/home/schop/radiodetector
+ExecStart=/usr/bin/python3 /home/schop/radiodetector/web_app.py
 Restart=always
 RestartSec=10
-StandardOutput=append:/home/schop/radiochecker/web.log
-StandardError=append:/home/schop/radiochecker/web.log
+StandardOutput=append:/home/schop/radiodetector/web.log
+StandardError=append:/home/schop/radiodetector/web.log
 
 # Optional: Environment variables
 Environment="PYTHONUNBUFFERED=1"

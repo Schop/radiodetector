@@ -5,12 +5,12 @@ After=network.target
 [Service]
 Type=simple
 User=schop
-WorkingDirectory=/home/schop/radiochecker
-ExecStart=/usr/bin/python3 /home/schop/radiochecker/main.py
+WorkingDirectory=/home/schop/radiodetector
+ExecStart=/usr/bin/python3 /home/schop/radiodetector/main.py
 Restart=always
 RestartSec=10
-StandardOutput=append:/home/schop/radiochecker/radio.log
-StandardError=append:/home/schop/radiochecker/radio.log
+StandardOutput=append:/home/schop/radiodetector/radio.log
+StandardError=append:/home/schop/radiodetector/radio.log
 
 # Optional: Limit log file size
 Environment="PYTHONUNBUFFERED=1"
