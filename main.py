@@ -238,11 +238,27 @@ def get_timestamp():
     return datetime.now().strftime('%H:%M')
 
 def normalize_song_title(title):
-    """Remove prefix patterns like '#742: ' from song titles"""
+    """Remove prefix patterns like '#742: ' from song titles and normalize case"""
     # Pattern matches: # followed by digits, then :, then optional space(s)
     # Example: "#742: Two Hearts" becomes "Two Hearts"
     normalized = re.sub(r'^#\d+:\s*', '', title)
-    return normalized
+    normalized = normalized.strip()
+    
+    # Normalize to title case for consistent storage (e.g., "PHIL COLLINS" -> "Phil Collins")
+    # This prevents duplicates due to different capitalization
+    # We use a custom title case that handles apostrophes correctly
+    words = []
+    for word in normalized.split():
+        # Handle words with apostrophes (e.g., "can't", "I'm")
+        if "'" in word:
+            parts = word.split("'")
+            # Capitalize first part, lowercase rest
+            word = parts[0].capitalize() + "'" + "'".join(p.lower() for p in parts[1:])
+        else:
+            word = word.capitalize()
+        words.append(word)
+    
+    return ' '.join(words)
 
 def create_song_key(artist, song):
     """Create a normalized key for song comparison to handle different orderings"""
