@@ -517,6 +517,9 @@ def main():
     log_print(f"- Target songs: {', '.join(TARGET_SONGS) if TARGET_SONGS else 'None'}")
     log_print("=" * 60)
     
+    # Create database cursor
+    c = conn.cursor()
+    
     # Track the last song played on each station to detect changes
     last_songs = {}
     
