@@ -214,8 +214,38 @@ def fetch_station_from_playlist24(station_slug):
         
         soup = BeautifulSoup(response.text, 'html.parser')
         
-        # Find the playlist table - look for the most recent song
-        # playlist24 typically uses a table structure with artist and title columns
+        # First try the track-block structure (used by Sublime FM and others)
+        track_blocks = soup.find_all('div', {'class': 'track-block'})
+        
+        if track_blocks:
+            # Iterate through track blocks to find the first one with valid data
+            for block in track_blocks:
+                # Find links with /titel/ and /artiest/ in href
+                links = block.find_all('a', href=lambda x: x and ('titel' in x or 'artiest' in x))
+                
+                if not links:
+                    continue
+                
+                title = None
+                artist = None
+                
+                for link in links:
+                    href = link.get('href', '')
+                    text = link.get_text(strip=True)
+                    
+                    # Only use links with actual text content
+                    if not text:
+                        continue
+                    
+                    if '/titel/' in href and not title:
+                        title = text
+                    elif '/artiest/' in href and not artist:
+                        artist = text
+                
+                if title and artist:
+                    return (artist, title)
+        
+        # Fallback: Try table structure (used by some other stations)
         table = soup.find('table', {'class': lambda x: x and 'playlist' in str(x).lower() if x else False})
         
         if not table:

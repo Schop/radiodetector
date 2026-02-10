@@ -5,7 +5,6 @@
 target_artists:
   - Phil Collins
   - Genesis
-  - Bad Bunny
 
 target_songs:
   - Africa
@@ -57,6 +56,10 @@ myonlineradio:
   Sky Radio: sky-radio
   SLAM!: slam
   Radio Veronica: veronica
+  Omroep Brabant: omroep-brabant
+  Omroep Gelderland: omroep-gelderland
+  L1 radio: l1-radio
+  Radio Noordzee: radio-noordzee
 
 playlist24:
   100% NL: 100pnl-playlist
@@ -69,5 +72,7 @@ playlist24:
   Q Music: qmusic-playlist
   Radio 10: radio-10-playlist
   "538": radio-538-playlist
+  Simone FM: simonefm-playlist
   Sky Radio: skyradio-playlist
   SLAM!: slamfm-playlist
+  Sublime FM: sublime-fm-playlist
