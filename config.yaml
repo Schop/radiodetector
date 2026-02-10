@@ -10,6 +10,18 @@ target_artists:
 target_songs:
   - Africa
 
+# Stations that should prioritize myonlineradio (e.g., due to relisten.nl homepage rotation)
+priority_myonlineradio:
+  - "538"
+  - NPO 3FM
+  - Q Music
+  - Sky Radio
+  - Radio Veronica
+  - Radio 10
+  - NPO Radio 1
+  - NPO Radio 2
+  - NPO Radio 5
+
 relisten:
   SLAM!: slam
   "538": 538

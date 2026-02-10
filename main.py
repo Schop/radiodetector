@@ -60,6 +60,7 @@ STATION_CONFIG = load_station_config()
 # Load target artists and songs from config
 TARGET_ARTISTS = STATION_CONFIG.get('target_artists', [])
 TARGET_SONGS = STATION_CONFIG.get('target_songs', [])
+PRIORITY_MYONLINERADIO = STATION_CONFIG.get('priority_myonlineradio', [])
 RELISTEN_STATIONS = {str(k): v for k, v in STATION_CONFIG.get('relisten', {}).items()}
 ALL_MYONLINERADIO_STATIONS = STATION_CONFIG.get('myonlineradio', {})
 ALL_PLAYLIST24_STATIONS = STATION_CONFIG.get('playlist24', {})
@@ -335,6 +336,8 @@ def main():
     log_print(f"- Monitoring {len(RELISTEN_STATIONS)} stations from relisten.nl")
     log_print(f"- Monitoring {len(MYONLINERADIO_STATIONS)} unique stations from myonlineradio.nl (excluding duplicates)")
     log_print(f"- Monitoring {len(PLAYLIST24_STATIONS)} unique stations from playlist24.nl (excluding duplicates)")
+    if PRIORITY_MYONLINERADIO:
+        log_print(f"- Prioritizing myonlineradio for: {', '.join(PRIORITY_MYONLINERADIO)}")
     log_print(f"- Target artists: {', '.join(TARGET_ARTISTS) if TARGET_ARTISTS else 'None'}")
     log_print(f"- Target songs: {', '.join(TARGET_SONGS) if TARGET_SONGS else 'None'}")
     log_print("=" * 60)
@@ -346,6 +349,16 @@ def main():
         while True:
             stations_data = {}
             relisten_failed = False
+            
+            # PRIORITY STATIONS: Fetch from myonlineradio FIRST for stations that need it
+            # (e.g., Radio 538 which is not reliably on relisten.nl homepage)
+            if PRIORITY_MYONLINERADIO and ALL_MYONLINERADIO_STATIONS:
+                for station_name in PRIORITY_MYONLINERADIO:
+                    if station_name in ALL_MYONLINERADIO_STATIONS:
+                        slug = ALL_MYONLINERADIO_STATIONS[station_name]
+                        result = fetch_station_from_myonlineradio(slug)
+                        if result:
+                            stations_data[station_name] = result
             
             # Fetch from relisten.nl (homepage scraping)
             if RELISTEN_STATIONS:
