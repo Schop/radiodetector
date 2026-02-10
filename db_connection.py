@@ -2,7 +2,6 @@
 Database connection module supporting both SQLite and MySQL
 """
 import sqlite3
-import mysql.connector
 import yaml
 import os
 import sys
@@ -44,6 +43,7 @@ def get_connection():
     """Get a database connection based on configuration"""
     if DB_TYPE == 'mysql':
         try:
+            import mysql.connector
             conn = mysql.connector.connect(
                 host=DB_CONFIG['host'],
                 port=DB_CONFIG['port'],
@@ -53,7 +53,12 @@ def get_connection():
                 autocommit=False
             )
             return conn, 'mysql'
-        except mysql.connector.Error as e:
+        except ImportError:
+            print("Warning: mysql-connector-python not installed, falling back to SQLite")
+            print("Install with: pip install mysql-connector-python")
+            conn = sqlite3.connect('radio_songs.db')
+            return conn, 'sqlite'
+        except Exception as e:
             print(f"Error connecting to MySQL: {e}")
             print("Falling back to SQLite...")
             # Fall back to SQLite
@@ -67,6 +72,7 @@ def get_dict_connection():
     """Get a database connection that returns rows as dictionaries"""
     if DB_TYPE == 'mysql':
         try:
+            import mysql.connector
             conn = mysql.connector.connect(
                 host=DB_CONFIG['host'],
                 port=DB_CONFIG['port'],
@@ -77,7 +83,12 @@ def get_dict_connection():
             )
             # MySQL returns tuples by default, we'll handle row_factory in cursor
             return conn, 'mysql'
-        except mysql.connector.Error as e:
+        except ImportError:
+            print("Warning: mysql-connector-python not installed, falling back to SQLite")
+            conn = sqlite3.connect('radio_songs.db')
+            conn.row_factory = sqlite3.Row
+            return conn, 'sqlite'
+        except Exception as e:
             print(f"Error connecting to MySQL: {e}")
             print("Falling back to SQLite...")
             # Fall back to SQLite

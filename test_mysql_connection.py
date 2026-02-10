@@ -17,17 +17,22 @@ try:
     print(f"{Fore.YELLOW}Attempting to connect (timeout: 10 seconds)...{Style.RESET_ALL}")
     
     # Set connection timeout
-    import mysql.connector
     if db.DB_TYPE == 'mysql':
-        conn = mysql.connector.connect(
-            host=db.DB_CONFIG['host'],
-            port=db.DB_CONFIG['port'],
-            user=db.DB_CONFIG['user'],
-            password=db.DB_CONFIG['password'],
-            database=db.DB_CONFIG['database'],
-            connection_timeout=10
-        )
-        db_type = 'mysql'
+        try:
+            import mysql.connector
+            conn = mysql.connector.connect(
+                host=db.DB_CONFIG['host'],
+                port=db.DB_CONFIG['port'],
+                user=db.DB_CONFIG['user'],
+                password=db.DB_CONFIG['password'],
+                database=db.DB_CONFIG['database'],
+                connection_timeout=10
+            )
+            db_type = 'mysql'
+        except ImportError:
+            print(f"{Fore.RED}✗ mysql-connector-python not installed{Style.RESET_ALL}")
+            print("Install with: pip install mysql-connector-python")
+            raise
     else:
         conn, db_type = db.get_connection()
     
