@@ -6,10 +6,33 @@ import time
 import re
 import os
 import yaml
+import sys
 from colorama import Fore, Style, init
 
 # Initialize colorama for cross-platform colored terminal output
 init(autoreset=True)
+
+# Log file path
+LOG_FILE = 'radio.log'
+
+def log_print(message, color='', style=''):
+    """Print to console and log to file"""
+    # Print to console with color
+    if color or style:
+        print(f"{color}{style}{message}{Style.RESET_ALL}")
+    else:
+        print(message)
+    
+    # Write to log file without color codes
+    try:
+        with open(LOG_FILE, 'a', encoding='utf-8') as f:
+            timestamp = datetime.now().strftime('[%Y-%m-%d %H:%M:%S]')
+            # Remove color codes for log file
+            clean_message = message
+            f.write(f"{timestamp} {clean_message}\n")
+            f.flush()
+    except Exception as e:
+        print(f"Error writing to log: {e}", file=sys.stderr)
 
 # Database setup
 conn = sqlite3.connect('radio_songs.db')
@@ -32,10 +55,10 @@ def load_station_config():
             config = yaml.safe_load(f)
             return config
     except FileNotFoundError:
-        print(f"{Fore.RED}Error: config.yaml not found{Style.RESET_ALL}")
+        log_print(f"Error: config.yaml not found", Fore.RED)
         return {'relisten': {}, 'myonlineradio': {}, 'playlist24': {}}
     except yaml.YAMLError as e:
-        print(f"{Fore.RED}Error parsing config.yaml: {e}{Style.RESET_ALL}")
+        log_print(f"Error parsing config.yaml: {e}", Fore.RED)
         return {'relisten': {}, 'myonlineradio': {}, 'playlist24': {}}
 
 # Load configuration
@@ -302,19 +325,19 @@ def fetch_all_stations_from_relisten():
         return stations_data
     
     except Exception as e:
-        print(f"{Fore.YELLOW}Error fetching from relisten.nl: {e}{Style.RESET_ALL}")
+        log_print(f"Error fetching from relisten.nl: {e}", Fore.YELLOW)
         return {}
 
 
 def main():
     """Main loop - Monitor Dutch radio stations for target artists and songs"""
-    print("Initializing radio checker...")
-    print(f"- Monitoring {len(RELISTEN_STATIONS)} stations from relisten.nl")
-    print(f"- Monitoring {len(MYONLINERADIO_STATIONS)} unique stations from myonlineradio.nl (excluding duplicates)")
-    print(f"- Monitoring {len(PLAYLIST24_STATIONS)} unique stations from playlist24.nl (excluding duplicates)")
-    print(f"- Target artists: {', '.join(TARGET_ARTISTS) if TARGET_ARTISTS else 'None'}")
-    print(f"- Target songs: {', '.join(TARGET_SONGS) if TARGET_SONGS else 'None'}")
-    print("=" * 60)
+    log_print("Initializing radio checker...")
+    log_print(f"- Monitoring {len(RELISTEN_STATIONS)} stations from relisten.nl")
+    log_print(f"- Monitoring {len(MYONLINERADIO_STATIONS)} unique stations from myonlineradio.nl (excluding duplicates)")
+    log_print(f"- Monitoring {len(PLAYLIST24_STATIONS)} unique stations from playlist24.nl (excluding duplicates)")
+    log_print(f"- Target artists: {', '.join(TARGET_ARTISTS) if TARGET_ARTISTS else 'None'}")
+    log_print(f"- Target songs: {', '.join(TARGET_SONGS) if TARGET_SONGS else 'None'}")
+    log_print("=" * 60)
     
     # Track the last song played on each station to detect changes
     last_songs = {}
@@ -364,7 +387,7 @@ def main():
                         stations_data[station_name] = result
             
             if not stations_data:
-                print(f"{Fore.RED}Warning: No station data retrieved from any source{Style.RESET_ALL}")
+                log_print(f"Warning: No station data retrieved from any source", Fore.RED)
                 time.sleep(60)
                 continue
             
@@ -416,21 +439,21 @@ def main():
                             print('\a', end='', flush=True)
                             
                             # Print with red warning and timestamp
-                            print(f"{Fore.RED}{Style.BRIGHT}[{ts}] [{station}] {normalized_song_info} {Style.RESET_ALL}")
+                            log_print(f"[{ts}] [{station}] {normalized_song_info}", Fore.RED, Style.BRIGHT)
                         else:
                             # Print normally for non-matching songs
-                            print(f"[{ts}] [{station}] {normalized_song_info}")
+                            log_print(f"[{ts}] [{station}] {normalized_song_info}")
             
             # Print status message
             if songs_changed == 0:
-                print(f"{Fore.CYAN}No song changes detected{Style.RESET_ALL}")
+                log_print("No song changes detected", Fore.CYAN)
             
             # Wait 60 seconds before next check
-            print(f"{Fore.CYAN}Waiting 60 seconds to update the list again...{Style.RESET_ALL}")
+            log_print("Waiting 60 seconds to update the list again...", Fore.CYAN)
             time.sleep(60)
     
     except KeyboardInterrupt:
-        print("\n\nShutting down...")
+        log_print("\n\nShutting down...")
     finally:
         conn.close()
 

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radio Checker - Logs</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='pico.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        #log-container {
+            background: #1a1a1a;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            padding: 1rem;
+            border-radius: 8px;
+            max-height: 70vh;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .log-controls {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+        .auto-refresh-status {
+            color: #4caf50;
+        }
+    </style>
+</head>
+<body>
+    <main class="container">
+        <nav>
+            <ul>
+                <li><strong>📻 Radio Checker</strong></li>
+            </ul>
+            <ul>
+                <li><a href="/">Dashboard</a></li>
+                <li><a href="/logs" class="contrast">Logs</a></li>
+            </ul>
+        </nav>
+
+        <h1>📋 Live Logs</h1>
+
+        <div class="log-controls">
+            <label>
+                <input type="checkbox" id="auto-refresh" checked>
+                Auto-refresh (5s)
+            </label>
+            <label>
+                Lines:
+                <select id="line-count">
+                    <option value="50">50</option>
+                    <option value="100" selected>100</option>
+                    <option value="200">200</option>
+                    <option value="500">500</option>
+                </select>
+            </label>
+            <button onclick="loadLogs()">Refresh Now</button>
+            <span id="status" class="auto-refresh-status"></span>
+        </div>
+
+        <div id="log-container">Loading logs...</div>
+    </main>
+
+    <script>
+        let autoRefreshInterval = null;
+
+        function loadLogs() {
+            const lines = document.getElementById('line-count').value;
+            const status = document.getElementById('status');
+            
+            status.textContent = 'Loading...';
+            
+            fetch(`/api/logs?lines=${lines}`)
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('log-container');
+                    if (data.success) {
+                        container.textContent = data.logs || 'No logs available.';
+                        // Auto-scroll to bottom
+                        container.scrollTop = container.scrollHeight;
+                        status.textContent = `✓ ${data.line_count} lines`;
+                    } else {
+                        container.textContent = `Error: ${data.error}`;
+                        status.textContent = '✗ Error';
+                    }
+                })
+                .catch(error => {
+                    document.getElementById('log-container').textContent = `Error loading logs: ${error}`;
+                    status.textContent = '✗ Failed';
+                });
+        }
+
+        function toggleAutoRefresh() {
+            const checkbox = document.getElementById('auto-refresh');
+            
+            if (checkbox.checked) {
+                // Start auto-refresh every 5 seconds
+                loadLogs();
+                autoRefreshInterval = setInterval(loadLogs, 5000);
+            } else {
+                // Stop auto-refresh
+                if (autoRefreshInterval) {
+                    clearInterval(autoRefreshInterval);
+                    autoRefreshInterval = null;
+                }
+            }
+        }
+
+        // Initialize
+        document.getElementById('auto-refresh').addEventListener('change', toggleAutoRefresh);
+        document.getElementById('line-count').addEventListener('change', loadLogs);
+
+        // Start auto-refresh on page load
+        toggleAutoRefresh();
+    </script>
+</body>
+</html>

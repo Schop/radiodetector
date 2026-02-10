@@ -1,0 +1,21 @@
+[Unit]
+Description=Radio Checker Web Interface
+After=network.target radiochecker.service
+Requires=radiochecker.service
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/radiochecker
+ExecStart=/usr/bin/python3 /home/pi/radiochecker/web_app.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/pi/radiochecker/web.log
+StandardError=append:/home/pi/radiochecker/web.log
+
+# Optional: Environment variables
+Environment="PYTHONUNBUFFERED=1"
+Environment="FLASK_ENV=production"
+
+[Install]
+WantedBy=multi-user.target

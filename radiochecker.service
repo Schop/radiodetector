@@ -1,0 +1,19 @@
+[Unit]
+Description=Radio Checker - Monitor Dutch Radio Stations
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/radiochecker
+ExecStart=/usr/bin/python3 /home/pi/radiochecker/main.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/home/pi/radiochecker/radio.log
+StandardError=append:/home/pi/radiochecker/radio.log
+
+# Optional: Limit log file size
+Environment="PYTHONUNBUFFERED=1"
+
+[Install]
+WantedBy=multi-user.target

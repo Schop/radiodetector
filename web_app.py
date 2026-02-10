@@ -4,14 +4,16 @@ Displays detected Phil Collins and Genesis songs from SQLite database
 Lightweight and Pi Zero friendly
 """
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
 from datetime import datetime, timedelta
 import sqlite3
 import os
+import platform
 from main import TARGET_ARTISTS, TARGET_SONGS
 
 app = Flask(__name__)
 DB_PATH = 'radio_songs.db'
+LOG_FILE = 'radio.log'
 
 def get_db_connection():
     """Create database connection"""
@@ -188,6 +190,39 @@ def export_csv():
         headers={'Content-Disposition': 'attachment; filename=radiodetector_songs.csv'}
     )
 
+@app.route('/api/logs')
+def get_logs():
+    """Get recent log entries"""
+    lines = request.args.get('lines', 100, type=int)
+    
+    # Try to read from log file
+    try:
+        if os.path.exists(LOG_FILE):
+            with open(LOG_FILE, 'r', encoding='utf-8') as f:
+                # Read all lines and get the last N
+                all_lines = f.readlines()
+                recent_lines = all_lines[-lines:]
+                return jsonify({
+                    'success': True,
+                    'logs': ''.join(recent_lines),
+                    'line_count': len(recent_lines)
+                })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Log file not found. Make sure main.py is running.'
+            })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'Error reading log file: {str(e)}'
+        })
+
+@app.route('/logs')
+def logs_page():
+    """Display logs page"""
+    return render_template('logs.html')
+
 if __name__ == '__main__':
     # Check if database exists
     if not os.path.exists(DB_PATH):
@@ -203,4 +238,5 @@ if __name__ == '__main__':
     print("=" * 50)
     
     # Run on all interfaces (so it's accessible from other machines)
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    # Debug mode disabled for production use
+    app.run(host='0.0.0.0', port=5000, debug=False)
