@@ -260,32 +260,6 @@ def artist_detail(artist_name):
         title=f"Artist: {artist_name}"
     )
 
-@app.route('/api/stats')
-def stats():
-    """JSON API for statistics"""
-    conn = get_db_connection()
-    c = conn.cursor()
-    
-    # Total songs detected
-    c.execute("SELECT COUNT(*) as count FROM songs")
-    total = c.fetchone()['count']
-    
-    # Songs per station
-    c.execute("SELECT station, COUNT(*) as count FROM songs GROUP BY station ORDER BY count DESC")
-    by_station = {row['station']: row['count'] for row in c.fetchall()}
-    
-    # Last detection
-    c.execute("SELECT timestamp FROM songs ORDER BY timestamp DESC LIMIT 1")
-    last_detection = c.fetchone()
-    
-    conn.close()
-    
-    return {
-        'total_songs': total,
-        'by_station': by_station,
-        'last_detection': last_detection['timestamp'] if last_detection else None
-    }
-
 @app.route('/api/chart-data')
 def chart_data():
     """JSON API for chart data (lightweight for Pi Zero)"""
