@@ -1,0 +1,207 @@
+{% include 'includes/head.html' %}
+<body>
+    <div class="container-fluid">
+        <main>
+            {% include 'includes/nav.html' %}
+            
+            <h1>{{ song_name }}</h1>
+            <h3 class="text-muted mb-4">
+                {% if artists|length == 1 %}
+                    by {{ artists[0] }}
+                {% elif artists|length > 1 %}
+                    by {{ artists|join(', ') }}
+                {% endif %}
+            </h3>
+            
+            <!-- Summary Stats -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Statistics</h5>
+                            <table class="compact-stats-table w-100">
+                                <tbody>
+                                    <tr>
+                                        <td>Total Plays</td>
+                                        <td>{{ total_detections }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Unique Stations</td>
+                                        <td>{{ stations|length }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Artists</td>
+                                        <td>{{ artists|length }}</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Stations Playing</h5>
+                            <div style="height: 200px;">
+                                <canvas id="stationsChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Hourly Distribution</h5>
+                            <div style="height: 200px;">
+                                <canvas id="hourlyChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title">Weekday Distribution</h5>
+                            <div style="height: 200px;">
+                                <canvas id="weekdayChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 class="mt-4">All Detections</h3>
+            <table id="songDetectionsTable" class="table table-striped table-hover display">
+                <thead class="table-light">
+                    <tr>
+                        <th>Station</th>
+                        <th>Artist</th>
+                        <th>Detected</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for song in songs %}
+                    <tr>
+                        <td><a href="/station/{{ song.station }}" class="station-link">{{ song.station }}</a></td>
+                        <td><span class="artist">{{ song.artist }}</span></td>
+                        <td class="timestamp" data-order="{{ song.timestamp_raw }}">{{ song.timestamp }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+        </main>
+    </div>
+
+    <script>
+        $(document).ready(function() {
+            $('#songDetectionsTable').DataTable({
+                order: [[2, 'desc']],
+                pageLength: 25
+            });
+
+            // Stations playing this song (pie chart)
+            const stationsData = {{ stations|tojson }};
+            const ctxStations = document.getElementById('stationsChart').getContext('2d');
+            new Chart(ctxStations, {
+                type: 'doughnut',
+                data: {
+                    labels: stationsData.map(s => s.station),
+                    datasets: [{
+                        data: stationsData.map(s => s.count),
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(153, 102, 255, 0.6)',
+                            'rgba(255, 159, 64, 0.6)',
+                            'rgba(199, 199, 199, 0.6)',
+                            'rgba(83, 102, 255, 0.6)',
+                            'rgba(255, 99, 255, 0.6)',
+                            'rgba(99, 255, 132, 0.6)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                font: { size: 10 }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Load and render distribution charts
+            fetch('/api/song/{{ song_name|urlencode }}/charts')
+                .then(response => response.json())
+                .then(data => {
+                    // Hourly distribution chart
+                    const ctxHourly = document.getElementById('hourlyChart').getContext('2d');
+                    new Chart(ctxHourly, {
+                        type: 'bar',
+                        data: {
+                            labels: data.hourly.labels,
+                            datasets: [{
+                                label: 'Plays by Hour',
+                                data: data.hourly.data,
+                                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                                borderColor: 'rgba(54, 162, 235, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { precision: 0 }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+
+                    // Weekday distribution chart
+                    const ctxWeekday = document.getElementById('weekdayChart').getContext('2d');
+                    new Chart(ctxWeekday, {
+                        type: 'bar',
+                        data: {
+                            labels: data.weekdays.labels,
+                            datasets: [{
+                                label: 'Plays by Weekday',
+                                data: data.weekdays.data,
+                                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                                borderColor: 'rgba(75, 192, 192, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: true,
+                                    ticks: { precision: 0 }
+                                }
+                            },
+                            plugins: {
+                                legend: { display: false }
+                            }
+                        }
+                    });
+                })
+                .catch(err => console.error('Failed to load chart data:', err));
+        });
+    </script>
+</body>
+</html>

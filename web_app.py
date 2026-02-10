@@ -90,6 +90,113 @@ def index():
         total_count=len(songs_data)
     )
 
+@app.route('/station/<station_name>')
+def station_detail(station_name):
+    """Station detail page - show all songs detected from this station"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Get all songs from this station
+    c.execute("SELECT * FROM songs WHERE station = ? ORDER BY timestamp DESC", (station_name,))
+    songs = c.fetchall()
+    
+    # Get total count
+    total_songs = len(songs)
+    
+    # Get unique artists from this station
+    c.execute("SELECT DISTINCT artist FROM songs WHERE station = ? ORDER BY artist", (station_name,))
+    artists = [row['artist'] for row in c.fetchall()]
+    
+    # Get unique song titles from this station
+    c.execute("SELECT DISTINCT song FROM songs WHERE station = ? ORDER BY song", (station_name,))
+    song_titles = [row['song'] for row in c.fetchall()]
+    
+    conn.close()
+    
+    # Format timestamps
+    songs_data = []
+    for song in songs:
+        ts = parse_iso_timestamp(song['timestamp'])
+        if ts:
+            ts_formatted = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ')
+        else:
+            ts_formatted = song['timestamp']
+        songs_data.append({
+            'station': song['station'],
+            'artist': song['artist'],
+            'song': song['song'],
+            'timestamp': ts_formatted,
+            'timestamp_raw': song['timestamp']
+        })
+    
+    return render_template(
+        'station.html',
+        station_name=station_name,
+        songs=songs_data,
+        total_songs=total_songs,
+        artists=artists,
+        song_titles=song_titles,
+        title = f"Station: {station_name}"
+    )
+
+@app.route('/song/<path:song_name>')
+def song_detail(song_name):
+    """Song detail page - show all stations that played this song"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Get all detections of this song
+    c.execute("SELECT * FROM songs WHERE song = ? ORDER BY timestamp DESC", (song_name,))
+    songs = c.fetchall()
+    
+    # Get total count
+    total_detections = len(songs)
+    
+    # Get stations that played this song with counts
+    c.execute("""
+        SELECT station, COUNT(*) as count 
+        FROM songs 
+        WHERE song = ? 
+        GROUP BY station 
+        ORDER BY count DESC
+    """, (song_name,))
+    stations_data = c.fetchall()
+    
+    # Get unique artists who performed this song
+    c.execute("SELECT DISTINCT artist FROM songs WHERE song = ? ORDER BY artist", (song_name,))
+    artists = [row['artist'] for row in c.fetchall()]
+    
+    conn.close()
+    
+    # Format timestamps
+    songs_data = []
+    for song in songs:
+        ts = parse_iso_timestamp(song['timestamp'])
+        if ts:
+            ts_formatted = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ')
+        else:
+            ts_formatted = song['timestamp']
+        songs_data.append({
+            'station': song['station'],
+            'artist': song['artist'],
+            'song': song['song'],
+            'timestamp': ts_formatted,
+            'timestamp_raw': song['timestamp']
+        })
+    
+    # Prepare station chart data
+    stations_list = [{'station': row['station'], 'count': row['count']} for row in stations_data]
+    
+    return render_template(
+        'song.html',
+        song_name=song_name,
+        songs=songs_data,
+        total_detections=total_detections,
+        artists=artists,
+        stations=stations_list,
+        title=f"Song: {song_name}"
+    )
+
 @app.route('/api/stats')
 def stats():
     """JSON API for statistics"""
@@ -179,6 +286,74 @@ def chart_data():
             'data': [day[1] for day in sorted_days]
         }
     }
+
+@app.route('/api/station/<station_name>/charts')
+def station_charts(station_name):
+    """Get chart data for a specific station (hourly and weekday distribution)"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Get all timestamps for this station
+    c.execute("SELECT timestamp FROM songs WHERE station = ?", (station_name,))
+    songs = c.fetchall()
+    conn.close()
+    
+    # Count by hour and weekday
+    hours = [0] * 24
+    weekdays = [0] * 7
+    
+    for row in songs:
+        ts = parse_iso_timestamp(row['timestamp'])
+        if ts:
+            hours[ts.hour] += 1
+            weekdays[ts.weekday()] += 1
+    
+    day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    
+    return jsonify({
+        'hourly': {
+            'labels': [f"{h}:00" for h in range(24)],
+            'data': hours
+        },
+        'weekdays': {
+            'labels': day_names,
+            'data': weekdays
+        }
+    })
+
+@app.route('/api/song/<path:song_name>/charts')
+def song_charts(song_name):
+    """Get chart data for a specific song (hourly and weekday distribution)"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Get all timestamps for this song
+    c.execute("SELECT timestamp FROM songs WHERE song = ?", (song_name,))
+    songs = c.fetchall()
+    conn.close()
+    
+    # Count by hour and weekday
+    hours = [0] * 24
+    weekdays = [0] * 7
+    
+    for row in songs:
+        ts = parse_iso_timestamp(row['timestamp'])
+        if ts:
+            hours[ts.hour] += 1
+            weekdays[ts.weekday()] += 1
+    
+    day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    
+    return jsonify({
+        'hourly': {
+            'labels': [f"{h}:00" for h in range(24)],
+            'data': hours
+        },
+        'weekdays': {
+            'labels': day_names,
+            'data': weekdays
+        }
+    })
 
 @app.route('/api/export')
 def export_csv():

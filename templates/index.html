@@ -203,9 +203,9 @@
                 <tbody>
                     {% for song in songs %}
                     <tr>
-                        <td><span class="station">{{ song.station }}</span></td>
+                        <td><a href="/station/{{ song.station }}" class="station-link">{{ song.station }}</a></td>
                         <td><span class="artist">{{ song.artist }}</span></td>
-                        <td>{{ song.song }}</td>
+                        <td><a href="/song/{{ song.song }}" class="station-link">{{ song.song }}</a></td>
                         <td class="timestamp" data-order="{{ song.timestamp_raw }}">{{ song.timestamp }}</td>
                     </tr>
                     {% endfor %}

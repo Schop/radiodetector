@@ -23,9 +23,9 @@
                 {% for song in songs %}
                 <tr id="row-{{ song['id'] }}">
                     <td>{{ song['id'] }}</td>
-                    <td class="editable" data-field="station">{{ song['station'] }}</td>
+                    <td class="editable" data-field="station"><a href="/station/{{ song['station'] }}" class="station-link">{{ song['station'] }}</a></td>
                     <td class="editable" data-field="artist">{{ song['artist'] }}</td>
-                    <td class="editable" data-field="song">{{ song['song'] }}</td>
+                    <td class="editable" data-field="song"><a href="/song/{{ song['song'] }}" class="station-link">{{ song['song'] }}</a></td>
                     <td class="editable timestamp" data-field="timestamp" data-order="{{ song['timestamp_raw'] }}" data-raw="{{ song['timestamp_raw'] }}">{{ song['timestamp'] }}</td>
                     <td>
                         <button class="btn btn-sm btn-primary btn-edit" data-id="{{ song['id'] }}" title="Edit">✏️</button>

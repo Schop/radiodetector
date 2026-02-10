@@ -107,6 +107,45 @@ sudo systemctl restart radiochecker
 sudo systemctl restart radiochecker-web
 ```
 
+## Remote Access with Tailscale
+
+Tailscale creates a secure private network so you can access your Pi from anywhere (phone, laptop, etc.) without port forwarding or exposing your home network.
+
+### Install Tailscale
+
+```bash
+# Install Tailscale
+curl -fsSL https://tailscale.com/install.sh | sh
+
+# Start Tailscale and authenticate
+sudo tailscale up
+```
+
+This will show a URL - open it in a browser to authenticate with your Tailscale account (create one if needed - it's free).
+
+### Get Your Pi's Tailscale IP
+
+```bash
+# Find your Tailscale IP address
+tailscale ip -4
+```
+
+You'll get an IP like `100.x.x.x` - this is your Pi's permanent address on your Tailscale network.
+
+### Access the Web Interface
+
+On any device with Tailscale installed:
+1. Install Tailscale app on your phone/laptop
+2. Connect to your Tailscale network
+3. Open browser and go to: `http://100.x.x.x:5000` (use your Pi's Tailscale IP)
+
+**Benefits:**
+- Access from anywhere with internet
+- Secured encrypted connection
+- No router configuration needed
+- Works on same WiFi or remote
+- Very lightweight (~10-20MB RAM)
+
 ## Running on Windows
 
 The code works on Windows too! Just run:
@@ -132,10 +171,15 @@ python web_app.py
 
 ## Configuration
 
-Edit `config.yaml` to:
-- Change target artists and songs
-- Enable/disable specific radio stations
-- Modify station sources
+The web interface provides a Settings page where you can:
+- Add/remove artists and songs to track
+- Enable/disable individual radio stations
+- Set priority for MyOnlineRadio stations
+- Add new stations to monitor
+
+**First Run:** `config.yaml` is used to populate the database initially. After that, all settings are managed through the web interface at `http://your-pi-ip:5000/settings` (or via Tailscale).
+
+**Hot Reload:** Changes made via the web interface are automatically picked up within 5 minutes - no need to restart services.
 
 ## Troubleshooting
 
