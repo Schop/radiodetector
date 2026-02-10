@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 import sqlite3
 import os
 import platform
-from main import TARGET_ARTISTS, TARGET_SONGS
+import json
 
 app = Flask(__name__)
 DB_PATH = 'radio_songs.db'
@@ -21,6 +21,21 @@ def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
+
+def get_setting(key, default=None):
+    """Get a setting value from database"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        row = c.fetchone()
+        conn.close()
+        
+        if row:
+            return json.loads(row['value'])
+        return default
+    except:
+        return default
 
 def parse_iso_timestamp(iso_string):
     """Parse ISO format timestamp"""
@@ -62,10 +77,14 @@ def index():
             'timestamp_raw': song['timestamp']
         })
     
+    # Get target artists and songs from database
+    target_artists = get_setting('target_artists', [])
+    target_songs = get_setting('target_songs', [])
+    
     return render_template(
         'index.html',
-        target_artists=TARGET_ARTISTS,
-        target_songs=TARGET_SONGS,
+        target_artists=target_artists,
+        target_songs=target_songs,
         songs=songs_data,
         stations=stations,
         total_count=len(songs_data)
@@ -354,6 +373,229 @@ def edit_song(song_id):
             'success': False,
             'error': str(e)
         }), 500
+
+@app.route('/settings')
+def settings_page():
+    """Settings management page"""
+    import json
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Load simple settings from settings table
+    settings = {}
+    settings_keys = ['target_artists', 'target_songs', 'priority_myonlineradio']
+    
+    for key in settings_keys:
+        c.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        row = c.fetchone()
+        if row:
+            try:
+                settings[key] = json.loads(row['value'])
+            except json.JSONDecodeError:
+                settings[key] = []
+        else:
+            settings[key] = []
+    
+    # Load stations from stations table
+    c.execute("SELECT id, name, slug, source, enabled, priority FROM stations ORDER BY source, name")
+    stations_rows = c.fetchall()
+    
+    # Organize stations by source
+    stations_by_source = {
+        'relisten': [],
+        'myonlineradio': [],
+        'playlist24': []
+    }
+    
+    for row in stations_rows:
+        station = {
+            'id': row['id'],
+            'name': row['name'],
+            'slug': row['slug'],
+            'source': row['source'],
+            'enabled': bool(row['enabled']),
+            'priority': bool(row['priority'])
+        }
+        stations_by_source[row['source']].append(station)
+    
+    conn.close()
+    
+    return render_template('settings.html', settings=settings, stations=stations_by_source)
+
+@app.route('/api/settings/<key>', methods=['GET'])
+def get_setting_api(key):
+    """Get a specific setting"""
+    import json
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    c.execute("SELECT value FROM settings WHERE key = ?", (key,))
+    row = c.fetchone()
+    
+    conn.close()
+    
+    if row:
+        try:
+            value = json.loads(row['value'])
+            return jsonify({'success': True, 'key': key, 'value': value})
+        except json.JSONDecodeError:
+            return jsonify({'success': False, 'error': 'Invalid JSON in database'}), 500
+    else:
+        return jsonify({'success': False, 'error': 'Setting not found'}), 404
+
+@app.route('/api/settings/<key>', methods=['POST'])
+def update_setting(key):
+    """Update a specific setting"""
+    import json
+    try:
+        data = request.get_json()
+        value = data.get('value')
+        
+        if value is None:
+            return jsonify({'success': False, 'error': 'No value provided'}), 400
+        
+        # Validate key
+        valid_keys = ['target_artists', 'target_songs', 'priority_myonlineradio', 
+                      'relisten', 'myonlineradio', 'playlist24']
+        if key not in valid_keys:
+            return jsonify({'success': False, 'error': 'Invalid setting key'}), 400
+        
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        timestamp = datetime.now().isoformat()
+        json_value = json.dumps(value)
+        
+        c.execute("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
+                 (key, json_value, timestamp))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Setting {key} updated successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/stations', methods=['GET'])
+def get_stations():
+    """Get all stations"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT id, name, slug, source, enabled, priority FROM stations ORDER BY source, name")
+        stations = [dict(row) for row in c.fetchall()]
+        conn.close()
+        
+        return jsonify({'success': True, 'stations': stations})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/stations/<int:station_id>/toggle', methods=['POST'])
+def toggle_station(station_id):
+    """Toggle station enabled/disabled"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Toggle enabled status
+        c.execute("UPDATE stations SET enabled = 1 - enabled, updated_at = ? WHERE id = ?",
+                 (datetime.now().isoformat(), station_id))
+        conn.commit()
+        
+        # Get updated station
+        c.execute("SELECT enabled FROM stations WHERE id = ?", (station_id,))
+        row = c.fetchone()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'enabled': bool(row['enabled']) if row else False
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/stations/<int:station_id>/priority', methods=['POST'])
+def toggle_station_priority(station_id):
+    """Toggle station priority"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        # Toggle priority status
+        c.execute("UPDATE stations SET priority = 1 - priority, updated_at = ? WHERE id = ?",
+                 (datetime.now().isoformat(), station_id))
+        conn.commit()
+        
+        # Get updated station
+        c.execute("SELECT priority FROM stations WHERE id = ?", (station_id,))
+        row = c.fetchone()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'priority': bool(row['priority']) if row else False
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/stations', methods=['POST'])
+def add_station():
+    """Add a new station"""
+    try:
+        data = request.get_json()
+        name = data.get('name')
+        slug = data.get('slug')
+        source = data.get('source')
+        
+        if not all([name, slug, source]):
+            return jsonify({'success': False, 'error': 'Name, slug, and source are required'}), 400
+        
+        if source not in ['relisten', 'myonlineradio', 'playlist24']:
+            return jsonify({'success': False, 'error': 'Invalid source'}), 400
+        
+        conn = get_db_connection()
+        c = conn.cursor()
+        
+        timestamp = datetime.now().isoformat()
+        c.execute(
+            "INSERT INTO stations (name, slug, source, enabled, priority, updated_at) VALUES (?, ?, ?, 1, 0, ?)",
+            (name, slug, source, timestamp)
+        )
+        conn.commit()
+        station_id = c.lastrowid
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Station {name} added successfully',
+            'id': station_id
+        })
+    except sqlite3.IntegrityError:
+        return jsonify({'success': False, 'error': 'Station already exists'}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/stations/<int:station_id>', methods=['DELETE'])
+def delete_station(station_id):
+    """Delete a station"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("DELETE FROM stations WHERE id = ?", (station_id,))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Station deleted successfully'
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     # Check if database exists

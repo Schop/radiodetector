@@ -38,6 +38,8 @@ def log_print(message, color='', style=''):
 # Database setup
 conn = sqlite3.connect('radio_songs.db')
 c = conn.cursor()
+
+# Create songs table
 c.execute('''CREATE TABLE IF NOT EXISTS songs (
     id INTEGER PRIMARY KEY,
     station TEXT,
@@ -45,11 +47,88 @@ c.execute('''CREATE TABLE IF NOT EXISTS songs (
     artist TEXT,
     timestamp TEXT
 )''')
+
+# Create settings table
+c.execute('''CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT,
+    updated_at TEXT
+)''')
+
+# Create stations table
+c.execute('''CREATE TABLE IF NOT EXISTS stations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL,
+    source TEXT NOT NULL,
+    enabled INTEGER DEFAULT 1,
+    priority INTEGER DEFAULT 0,
+    updated_at TEXT,
+    UNIQUE(name, source)
+)''')
+
 conn.commit()
 
-# Load station mappings from YAML file
-def load_station_config():
-    """Load station mappings from config.yaml"""
+def migrate_database():
+    """Check database schema version and perform migrations"""
+    c = conn.cursor()
+    
+    # Check if settings table exists and has data
+    c.execute("SELECT COUNT(*) FROM settings")
+    settings_count = c.fetchone()[0]
+    
+    # Check if stations table has data
+    c.execute("SELECT COUNT(*) FROM stations")
+    stations_count = c.fetchone()[0]
+    
+    # If tables are empty, migrate from config.yaml
+    if settings_count == 0 or stations_count == 0:
+        log_print("Migrating configuration from YAML to database...", Fore.YELLOW)
+        config = load_station_config_from_yaml()
+        
+        # Import simple settings into settings table
+        import json
+        timestamp = datetime.now().isoformat()
+        
+        if settings_count == 0:
+            settings_to_migrate = [
+                ('target_artists', json.dumps(config.get('target_artists', []))),
+                ('target_songs', json.dumps(config.get('target_songs', []))),
+                ('priority_myonlineradio', json.dumps(config.get('priority_myonlineradio', [])))
+            ]
+            
+            for key, value in settings_to_migrate:
+                c.execute("INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, ?)",
+                         (key, value, timestamp))
+        
+        # Import stations into stations table
+        if stations_count == 0:
+            stations_to_migrate = []
+            
+            # Add relisten stations
+            for name, slug in config.get('relisten', {}).items():
+                stations_to_migrate.append((name, slug, 'relisten', 1, 0, timestamp))
+            
+            # Add myonlineradio stations
+            for name, slug in config.get('myonlineradio', {}).items():
+                # Check if this station should be prioritized
+                priority = 1 if name in config.get('priority_myonlineradio', []) else 0
+                stations_to_migrate.append((name, slug, 'myonlineradio', 1, priority, timestamp))
+            
+            # Add playlist24 stations
+            for name, slug in config.get('playlist24', {}).items():
+                stations_to_migrate.append((name, slug, 'playlist24', 1, 0, timestamp))
+            
+            c.executemany(
+                "INSERT OR IGNORE INTO stations (name, slug, source, enabled, priority, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+                stations_to_migrate
+            )
+        
+        conn.commit()
+        log_print("Configuration migration completed!", Fore.GREEN)
+
+def load_station_config_from_yaml():
+    """Load station mappings from config.yaml (fallback/initial load)"""
     config_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
     try:
         with open(config_path, 'r', encoding='utf-8') as f:
@@ -62,9 +141,78 @@ def load_station_config():
         log_print(f"Error parsing config.yaml: {e}", Fore.RED)
         return {'relisten': {}, 'myonlineradio': {}, 'playlist24': {}}
 
-# Load configuration
+def load_station_config():
+    """Load station configuration from database"""
+    import json
+    c = conn.cursor()
+    
+    config = {}
+    
+    # Load simple settings from settings table
+    settings_keys = ['target_artists', 'target_songs', 'priority_myonlineradio']
+    
+    for key in settings_keys:
+        c.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        row = c.fetchone()
+        if row:
+            try:
+                config[key] = json.loads(row[0])
+            except json.JSONDecodeError:
+                config[key] = []
+        else:
+            config[key] = []
+    
+    # Load stations from stations table
+    c.execute("SELECT name, slug, source FROM stations WHERE enabled = 1")
+    stations = c.fetchall()
+    
+    config['relisten'] = {}
+    config['myonlineradio'] = {}
+    config['playlist24'] = {}
+    
+    for row in stations:
+        name, slug, source = row
+        if source == 'relisten':
+            config['relisten'][name] = slug
+        elif source == 'myonlineradio':
+            config['myonlineradio'][name] = slug
+        elif source == 'playlist24':
+            config['playlist24'][name] = slug
+    
+    return config
+
+def reload_settings():
+    """Reload settings from database and update global variables"""
+    global TARGET_ARTISTS, TARGET_SONGS, PRIORITY_MYONLINERADIO
+    global RELISTEN_STATIONS, ALL_MYONLINERADIO_STATIONS, ALL_PLAYLIST24_STATIONS
+    global MYONLINERADIO_STATIONS, PLAYLIST24_STATIONS
+    
+    config = load_station_config()
+    
+    TARGET_ARTISTS = config.get('target_artists', [])
+    TARGET_SONGS = config.get('target_songs', [])
+    PRIORITY_MYONLINERADIO = config.get('priority_myonlineradio', [])
+    RELISTEN_STATIONS = {str(k): v for k, v in config.get('relisten', {}).items()}
+    ALL_MYONLINERADIO_STATIONS = config.get('myonlineradio', {})
+    ALL_PLAYLIST24_STATIONS = config.get('playlist24', {})
+    
+    # Filter out myonlineradio stations that are already in relisten
+    relisten_station_names = set(RELISTEN_STATIONS.keys())
+    MYONLINERADIO_STATIONS = {name: slug for name, slug in ALL_MYONLINERADIO_STATIONS.items() 
+                               if name not in relisten_station_names}
+    
+    # Filter out playlist24 stations that are already in relisten or myonlineradio
+    all_covered_stations = set(RELISTEN_STATIONS.keys()) | set(ALL_MYONLINERADIO_STATIONS.keys())
+    PLAYLIST24_STATIONS = {name: slug for name, slug in ALL_PLAYLIST24_STATIONS.items() 
+                           if name not in all_covered_stations}
+    
+    log_print("Settings reloaded from database", Fore.GREEN)
+
+# Perform database migration
+migrate_database()
+
+# Load configuration from database
 STATION_CONFIG = load_station_config()
-# Convert all relisten keys to strings to handle numeric station names like "538"
 
 # Load target artists and songs from config
 TARGET_ARTISTS = STATION_CONFIG.get('target_artists', [])
@@ -384,8 +532,25 @@ def main():
     # Track the last song played on each station to detect changes
     last_songs = {}
     
+    # Track settings reload (check every 5 minutes)
+    settings_check_counter = 0
+    last_settings_check = None
+    
     try:
         while True:
+            # Check if settings have been updated (every 5 iterations = 5 minutes)
+            settings_check_counter += 1
+            if settings_check_counter >= 5:
+                settings_check_counter = 0
+                c.execute("SELECT MAX(updated_at) FROM settings")
+                latest_update = c.fetchone()[0]
+                if last_settings_check is None:
+                    last_settings_check = latest_update
+                elif latest_update and latest_update != last_settings_check:
+                    log_print("Detected settings change, reloading configuration...", Fore.YELLOW)
+                    reload_settings()
+                    last_settings_check = latest_update
+            
             stations_data = {}
             relisten_failed = False
             

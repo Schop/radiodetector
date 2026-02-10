@@ -1,0 +1,345 @@
+{% include 'includes/head.html' %}
+<body>
+    <div class="container-fluid">
+        <main>
+            {% include 'includes/nav.html' %}
+            
+            <h1>⚙️ Settings</h1>
+            <p>Configure which artists and songs to track across radio stations.</p>
+            
+            <div class="row g-4">
+                <!-- Target Artists -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">📻 Target Artists</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">Artists to track across all stations</p>
+                            <div id="artists-list" class="mb-3">
+                                {% for artist in settings.target_artists %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-primary me-2">{{ artist }}</span>
+                                    <button class="btn btn-sm btn-danger" onclick="removeItem('target_artists', '{{ artist }}')">×</button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="input-group">
+                                <input type="text" id="new-artist" class="form-control" placeholder="Add artist name...">
+                                <button class="btn btn-primary" onclick="addItem('target_artists', 'new-artist')">Add</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Target Songs -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header bg-success text-white">
+                            <h5 class="mb-0">🎵 Target Songs</h5>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small">Specific songs to track (any artist)</p>
+                            <div id="songs-list" class="mb-3">
+                                {% for song in settings.target_songs %}
+                                <div class="d-flex align-items-center mb-2">
+                                    <span class="badge bg-success me-2">{{ song }}</span>
+                                    <button class="btn btn-sm btn-danger" onclick="removeItem('target_songs', '{{ song }}')">×</button>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            <div class="input-group">
+                                <input type="text" id="new-song" class="form-control" placeholder="Add song name...">
+                                <button class="btn btn-success" onclick="addItem('target_songs', 'new-song')">Add</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-4" role="alert">
+                <strong>ℹ️ Note:</strong> Changes will be automatically picked up by the radio checker within 5 minutes without requiring a restart.
+            </div>
+            
+            <!-- Station Management -->
+            <h2 class="mt-5 mb-3">📡 Station Management</h2>
+            
+            <ul class="nav nav-tabs" id="stationTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="relisten-tab" data-bs-toggle="tab" data-bs-target="#relisten" type="button">
+                        Relisten.nl ({{ stations.relisten|length }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="myonlineradio-tab" data-bs-toggle="tab" data-bs-target="#myonlineradio" type="button">
+                        MyOnlineRadio ({{ stations.myonlineradio|length }})
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="playlist24-tab" data-bs-toggle="tab" data-bs-target="#playlist24" type="button">
+                        Playlist24 ({{ stations.playlist24|length }})
+                    </button>
+                </li>
+            </ul>
+            
+            <div class="tab-content border border-top-0 p-3 bg-white" id="stationTabContent">
+                <!-- Relisten Stations -->
+                <div class="tab-pane fade show active" id="relisten" role="tabpanel">
+                    <p class="text-muted">Toggle stations to enable/disable monitoring</p>
+                    <div class="row g-2">
+                        {% for station in stations.relisten %}
+                        <div class="col-md-4 col-sm-6">
+                            <div class="card">
+                                <div class="card-body p-2 d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ station.name }}</strong>
+                                        <br><small class="text-muted">{{ station.slug }}</small>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="station-{{ station.id }}" 
+                                               {% if station.enabled %}checked{% endif %}
+                                               onchange="toggleStation({{ station.id }})">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button class="btn btn-sm btn-primary mt-3" onclick="showAddStationModal('relisten')">+ Add Station</button>
+                </div>
+                
+                <!-- MyOnlineRadio Stations -->
+                <div class="tab-pane fade" id="myonlineradio" role="tabpanel">
+                    <p class="text-muted">Toggle stations and set priority for preference over relisten.nl</p>
+                    <div class="row g-2">
+                        {% for station in stations.myonlineradio %}
+                        <div class="col-md-4 col-sm-6">
+                            <div class="card {% if station.priority %}border-warning{% endif %}">
+                                <div class="card-body p-2">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div>
+                                            <strong>{{ station.name }}</strong>
+                                            {% if station.priority %}<span class="badge bg-warning text-dark ms-1">Priority</span>{% endif %}
+                                            <br><small class="text-muted">{{ station.slug }}</small>
+                                        </div>
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="station-{{ station.id }}" 
+                                                   {% if station.enabled %}checked{% endif %}
+                                                   onchange="toggleStation({{ station.id }})">
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-sm {% if station.priority %}btn-warning{% else %}btn-outline-secondary{% endif %}" 
+                                            onclick="togglePriority({{ station.id }})">
+                                        {% if station.priority %}★ Priority{% else %}☆ Set Priority{% endif %}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button class="btn btn-sm btn-primary mt-3" onclick="showAddStationModal('myonlineradio')">+ Add Station</button>
+                </div>
+                
+                <!-- Playlist24 Stations -->
+                <div class="tab-pane fade" id="playlist24" role="tabpanel">
+                    <p class="text-muted">Toggle stations to enable/disable monitoring</p>
+                    <div class="row g-2">
+                        {% for station in stations.playlist24 %}
+                        <div class="col-md-4 col-sm-6">
+                            <div class="card">
+                                <div class="card-body p-2 d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ station.name }}</strong>
+                                        <br><small class="text-muted">{{ station.slug }}</small>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" id="station-{{ station.id }}" 
+                                               {% if station.enabled %}checked{% endif %}
+                                               onchange="toggleStation({{ station.id }})">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button class="btn btn-sm btn-primary mt-3" onclick="showAddStationModal('playlist24')">+ Add Station</button>
+                </div>
+            </div>
+            
+        </main>
+    </div>
+    
+    <!-- Add Station Modal -->
+    <div class="modal fade" id="addStationModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Add New Station</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="newStationSource">
+                    <div class="mb-3">
+                        <label for="newStationName" class="form-label">Station Name</label>
+                        <input type="text" class="form-control" id="newStationName" placeholder="e.g., Radio 10">
+                    </div>
+                    <div class="mb-3">
+                        <label for="newStationSlug" class="form-label">Station Slug</label>
+                        <input type="text" class="form-control" id="newStationSlug" placeholder="e.g., radio10">
+                        <small class="text-muted">The identifier used in URLs</small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="addStation()">Add Station</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let addStationModal;
+        $(document).ready(function() {
+            addStationModal = new bootstrap.Modal(document.getElementById('addStationModal'));
+        });
+        
+        function toggleStation(stationId) {
+            fetch(`/api/stations/${stationId}/toggle`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (!result.success) {
+                    alert('Error: ' + result.error);
+                    location.reload();
+                }
+            })
+            .catch(error => {
+                alert('Error: ' + error);
+                location.reload();
+            });
+        }
+        
+        function togglePriority(stationId) {
+            fetch(`/api/stations/${stationId}/priority`, {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+        
+        function showAddStationModal(source) {
+            document.getElementById('newStationSource').value = source;
+            document.getElementById('newStationName').value = '';
+            document.getElementById('newStationSlug').value = '';
+            addStationModal.show();
+        }
+        
+        function addStation() {
+            const source = document.getElementById('newStationSource').value;
+            const name = document.getElementById('newStationName').value.trim();
+            const slug = document.getElementById('newStationSlug').value.trim();
+            
+            if (!name || !slug) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            fetch('/api/stations', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, slug, source })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    addStationModal.hide();
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            })
+            .catch(error => alert('Error: ' + error));
+        }
+        function addItem(settingKey, inputId) {
+            const input = document.getElementById(inputId);
+            const value = input.value.trim();
+            
+            if (!value) {
+                alert('Please enter a value');
+                return;
+            }
+            
+            // Get current setting
+            fetch(`/api/settings/${settingKey}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const currentValue = data.value || [];
+                        if (currentValue.includes(value)) {
+                            alert('This item already exists');
+                            return;
+                        }
+                        
+                        // Add new item
+                        currentValue.push(value);
+                        
+                        // Update setting
+                        return fetch(`/api/settings/${settingKey}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ value: currentValue })
+                        });
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        input.value = '';
+                        location.reload();
+                    } else {
+                        alert('Error: ' + result.error);
+                    }
+                })
+                .catch(error => alert('Error: ' + error));
+        }
+        
+        function removeItem(settingKey, itemToRemove) {
+            if (!confirm(`Remove "${itemToRemove}"?`)) return;
+            
+            // Get current setting
+            fetch(`/api/settings/${settingKey}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        const currentValue = data.value || [];
+                        const newValue = currentValue.filter(item => item !== itemToRemove);
+                        
+                        // Update setting
+                        return fetch(`/api/settings/${settingKey}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ value: newValue })
+                        });
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + result.error);
+                    }
+                })
+                .catch(error => alert('Error: ' + error));
+        }
+    </script>
+</body>
+</html>
