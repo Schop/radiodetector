@@ -12,7 +12,7 @@ target_songs:
 
 relisten:
   SLAM!: slam
-  Radio 538: 538
+  "538": 538
   NPO 3FM: 3fm
   Q Music: qmusic
   100% NL: 100p
@@ -39,7 +39,7 @@ myonlineradio:
   NPO Radio 5: npo-radio-5
   Q Music: q-music
   Radio 10: radio-10
-  Radio 538: radio-538
+  "538": radio-538
   RadioNL: radionl
   Sky Radio: sky-radio
   SLAM!: slam
@@ -55,6 +55,6 @@ playlist24:
   NPO Radio 5: radio-5-playlist
   Q Music: qmusic-playlist
   Radio 10: radio-10-playlist
-  Radio 538: radio-538-playlist
+  "538": radio-538-playlist
   Sky Radio: skyradio-playlist
   SLAM!: slamfm-playlist
