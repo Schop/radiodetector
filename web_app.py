@@ -264,6 +264,97 @@ def get_uptime():
             'error': str(e)
         })
 
+@app.route('/admin')
+def admin_page():
+    """Database maintenance page - browse, edit, delete entries"""
+    conn = get_db_connection()
+    c = conn.cursor()
+    
+    # Get all songs (DataTables will handle filtering/pagination client-side)
+    c.execute("SELECT * FROM songs ORDER BY timestamp DESC")
+    songs = c.fetchall()
+    
+    conn.close()
+    
+    # Convert timestamps to readable format
+    songs_data = []
+    for song in songs:
+        ts = parse_iso_timestamp(song['timestamp'])
+        # Format: "10 Feb 2026 at 14:30" (use %#d for Windows, %d and strip for others)
+        if ts:
+            ts_formatted = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ')
+        else:
+            ts_formatted = song['timestamp']
+        songs_data.append({
+            'id': song['id'],
+            'station': song['station'],
+            'artist': song['artist'],
+            'song': song['song'],
+            'timestamp': ts_formatted,
+            'timestamp_raw': song['timestamp']
+        })
+    
+    return render_template(
+        'maintenance.html',
+        songs=songs_data
+    )
+
+@app.route('/api/delete/<int:song_id>', methods=['POST'])
+def delete_song(song_id):
+    """Delete a song entry"""
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("DELETE FROM songs WHERE id = ?", (song_id,))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Song ID {song_id} deleted successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/edit/<int:song_id>', methods=['POST'])
+def edit_song(song_id):
+    """Edit a song entry"""
+    try:
+        data = request.get_json()
+        station = data.get('station')
+        artist = data.get('artist')
+        song = data.get('song')
+        timestamp = data.get('timestamp')
+        
+        if not all([station, artist, song, timestamp]):
+            return jsonify({
+                'success': False,
+                'error': 'All fields are required'
+            }), 400
+        
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("""
+            UPDATE songs 
+            SET station = ?, artist = ?, song = ?, timestamp = ?
+            WHERE id = ?
+        """, (station, artist, song, timestamp, song_id))
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Song ID {song_id} updated successfully'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 if __name__ == '__main__':
     # Check if database exists
     if not os.path.exists(DB_PATH):

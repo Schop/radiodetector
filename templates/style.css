@@ -1,7 +1,5 @@
 /* Custom styling for RadioDetector Dashboard */
 
-
-
 body {
   min-height: 100vh;
   margin: 0;
@@ -204,6 +202,29 @@ tbody tr:nth-child(odd) {
   color: blue;
   border-color: transparent;
 }
+
+#log-container {
+    background: #1a1a1a;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    padding: 1rem;
+    border-radius: 8px;
+    max-height: 70vh;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+.log-controls {
+    margin-bottom: 1rem;
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+.auto-refresh-status {
+    color: #4caf50;
+}
+
 
 /* Responsive Design */
 @media (max-width: 768px) {

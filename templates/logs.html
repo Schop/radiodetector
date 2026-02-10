@@ -1,62 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radio Checker - Logs</title>
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
-    <link rel="stylesheet" href="/static/style.css">
-    <style>
-        #log-container {
-            background: #1a1a1a;
-            color: #00ff00;
-            font-family: 'Courier New', monospace;
-            font-size: 14px;
-            padding: 1rem;
-            border-radius: 8px;
-            max-height: 70vh;
-            overflow-y: auto;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-        }
-        .log-controls {
-            margin-bottom: 1rem;
-            display: flex;
-            gap: 1rem;
-            align-items: center;
-        }
-        .auto-refresh-status {
-            color: #4caf50;
-        }
-    </style>
-</head>
+{% include 'head.html' %}
 <body>
-
-
-    <main>
-        {% include 'nav.html' %}
+    <div class="container-fluid">
+        <main>
+            {% include 'nav.html' %}
         <h1>Live Logs</h1>
 
-        <div class="log-controls">
-            <label>
-                <input type="checkbox" id="auto-refresh" checked>
-                Auto-refresh (5s)
-            </label>
-            <label>
-                Lines:
-                <select id="line-count">
+        <div class="log-controls mb-3 d-flex gap-2 align-items-center flex-wrap">
+            <div class="form-check">
+                <input type="checkbox" class="form-check-input" id="auto-refresh" checked>
+                <label class="form-check-label" for="auto-refresh">Auto-refresh (5s)</label>
+            </div>
+            <div>
+                <label for="line-count" class="form-label me-2 mb-0">Lines:</label>
+                <select id="line-count" class="form-select form-select-sm d-inline-block w-auto">
                     <option value="50">50</option>
                     <option value="100" selected>100</option>
                     <option value="200">200</option>
                     <option value="500">500</option>
                 </select>
-            </label>
-            <button onclick="loadLogs()">Refresh Now</button>
-            <span id="status" class="auto-refresh-status"></span>
+            </div>
+            <button onclick="loadLogs()" class="btn btn-primary btn-sm">Refresh Now</button>
+            <span id="status" class="auto-refresh-status text-muted ms-2"></span>
         </div>
 
-        <div id="log-container">Loading logs...</div>
-    </main>
+        <div id="log-container" class="log-container">Loading logs...</div>
+        </main>
+    </div>
 
     <script>
         let autoRefreshInterval = null;

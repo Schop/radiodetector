@@ -17,14 +17,20 @@ LOG_FILE = 'radio.log'
 UPTIME_FILE = '.uptime'
 
 def log_print(message, color='', style=''):
-    """Print to console (and log to file when run as systemd service)"""
+    """Print to console with color and write to log file"""
     # Print to console with color
     if color or style:
         print(f"{color}{style}{message}{Style.RESET_ALL}")
     else:
         print(message)
-    # Note: When running as systemd service, stdout is redirected to radio.log
-    # When running manually, output goes to console only
+    
+    # Write to log file (without color codes)
+    try:
+        with open(LOG_FILE, 'a', encoding='utf-8') as f:
+            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            f.write(f"[{timestamp}] {message}\n")
+    except Exception as e:
+        print(f"Warning: Could not write to log file: {e}")
 
 # Database setup
 conn = sqlite3.connect('radio_songs.db')

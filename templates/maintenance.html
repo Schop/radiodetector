@@ -1,0 +1,209 @@
+{% include 'head.html' %}
+<body>
+    <div class="container-fluid">
+        <main>
+            {% include 'nav.html' %}
+        
+        <h1>🔧 Database Maintenance</h1>
+        <p>Browse, edit, and delete song entries from the database.</p>
+        
+        <!-- Songs Table with DataTables -->
+        <table id="maintenanceTable" class="table table-striped table-hover display">
+            <thead class="table-light">
+                <tr>
+                    <th>ID</th>
+                    <th>Station</th>
+                    <th>Artist</th>
+                    <th>Song</th>
+                    <th>Timestamp</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for song in songs %}
+                <tr id="row-{{ song['id'] }}">
+                    <td>{{ song['id'] }}</td>
+                    <td class="editable" data-field="station">{{ song['station'] }}</td>
+                    <td class="editable" data-field="artist">{{ song['artist'] }}</td>
+                    <td class="editable" data-field="song">{{ song['song'] }}</td>
+                    <td class="editable timestamp" data-field="timestamp" data-order="{{ song['timestamp_raw'] }}" data-raw="{{ song['timestamp_raw'] }}">{{ song['timestamp'] }}</td>
+                    <td>
+                        <button class="btn btn-sm btn-primary btn-edit" data-id="{{ song['id'] }}" title="Edit">✏️</button>
+                        <button class="btn btn-sm btn-danger btn-delete" data-id="{{ song['id'] }}" title="Delete">🗑️</button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        </main>
+    </div>
+    
+    <!-- Edit Modal -->
+    <div class="modal fade" id="editModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Entry</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <input type="hidden" id="editId">
+                        <div class="mb-3">
+                            <label for="editStation" class="form-label">Station</label>
+                            <input type="text" class="form-control" id="editStation" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editArtist" class="form-label">Artist</label>
+                            <input type="text" class="form-control" id="editArtist" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editSong" class="form-label">Song</label>
+                            <input type="text" class="form-control" id="editSong" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="editTimestamp" class="form-label">Timestamp</label>
+                            <input type="text" class="form-control" id="editTimestamp" required 
+                                   placeholder="YYYY-MM-DDTHH:MM:SS">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="saveEdit()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <style>
+        .btn-edit {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-edit:hover {
+            opacity: 0.8;
+        }
+        .btn-delete {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-delete:hover {
+            background-color: #c0392b;
+        }
+        .editable {
+            cursor: pointer;
+        }
+        .close {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+    
+    <script>
+        // Initialize DataTables
+        $(document).ready(function() {
+            $('#maintenanceTable').DataTable({
+                order: [[0, 'desc']], // Sort by ID descending (most recent first)
+                pageLength: 50,
+                lengthMenu: [[25, 50, 100, -1], [25, 50, 100, "All"]],
+                responsive: true,
+                autoWidth: false,
+                language: {
+                    search: "Search:",
+                    lengthMenu: "Show _MENU_ entries",
+                    info: "Showing _START_ to _END_ of _TOTAL_ entries"
+                },
+                columnDefs: [
+                    { orderable: false, targets: 5 } // Disable sorting on Actions column
+                ]
+            });
+        });
+        
+        let editModal;
+        $(document).ready(function() {
+            editModal = new bootstrap.Modal(document.getElementById('editModal'));
+        });
+        
+        // Edit functionality (using event delegation for DataTables)
+        $(document).on('click', '.btn-edit', function() {
+            const id = $(this).data('id');
+            const row = $('#row-' + id);
+            const cells = row.find('.editable');
+            
+            document.getElementById('editId').value = id;
+            document.getElementById('editStation').value = cells.eq(0).text();
+            document.getElementById('editArtist').value = cells.eq(1).text();
+            document.getElementById('editSong').value = cells.eq(2).text();
+            // Use raw timestamp for editing
+            document.getElementById('editTimestamp').value = cells.eq(3).data('raw');
+            
+            editModal.show();
+        });
+        
+        function saveEdit() {
+            const id = document.getElementById('editId').value;
+            const data = {
+                station: document.getElementById('editStation').value,
+                artist: document.getElementById('editArtist').value,
+                song: document.getElementById('editSong').value,
+                timestamp: document.getElementById('editTimestamp').value
+            };
+            
+            fetch(`/api/edit/${id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    editModal.hide();
+                    alert('Entry updated successfully!');
+                    // Reload page to show formatted timestamp
+                    location.reload();
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            })
+            .catch(error => {
+                alert('Error updating entry: ' + error);
+            });
+        }
+        
+        // Delete functionality (using event delegation for DataTables)
+        $(document).on('click', '.btn-delete', function() {
+            const id = $(this).data('id');
+            
+            if (confirm('Are you sure you want to delete this entry?')) {
+                    fetch(`/api/delete/${id}`, {
+                        method: 'POST'
+                    })
+                    .then(response => response.json())
+                    .then(result => {
+                        if (result.success) {
+                            // Remove the row from DataTable
+                            const table = $('#maintenanceTable').DataTable();
+                            table.row('#row-' + id).remove().draw();
+                            alert('Entry deleted successfully!');
+                        } else {
+                            alert('Error: ' + result.error);
+                        }
+                    })
+                    .catch(error => {
+                        alert('Error deleting entry: ' + error);
+                });
+            }
+        });
+    </script>
+</body>
+</html>
