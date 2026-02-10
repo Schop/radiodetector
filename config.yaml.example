@@ -17,6 +17,13 @@ database:
   mysql_password: YOUR_SECURE_PASSWORD_HERE  # ⚠️ CHANGE THIS!
   mysql_database: radiochecker
 
+# Web interface authentication
+# Protects settings, maintenance, and delete operations
+web_auth:
+  enabled: true  # Set to false to disable authentication
+  username: admin  # Change to your preferred username
+  password: YOUR_SECURE_PASSWORD_HERE  # ⚠️ CHANGE THIS!
+
 # Target artists and songs to check
 target_artists:
   - Phil Collins

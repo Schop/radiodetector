@@ -4,17 +4,51 @@ Displays detected Phil Collins and Genesis songs from SQLite database
 Lightweight and Pi Zero friendly
 """
 
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, session, redirect, url_for, flash
 from datetime import datetime, timedelta
 import os
 import platform
 import json
+import yaml
+import secrets
+from functools import wraps
 import db_connection as db
 
 app = Flask(__name__)
+# Generate a random secret key for sessions
+app.secret_key = secrets.token_hex(32)
 DB_PATH = 'radio_songs.db'
 LOG_FILE = 'radio.log'
 UPTIME_FILE = '.uptime'
+
+# Load auth configuration
+def load_auth_config():
+    """Load authentication settings from config.yaml"""
+    config_path = os.path.join(os.path.dirname(__file__), 'config.yaml')
+    try:
+        with open(config_path, 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+            auth_config = config.get('web_auth', {})
+            return {
+                'enabled': auth_config.get('enabled', False),
+                'username': auth_config.get('username', 'admin'),
+                'password': auth_config.get('password', 'admin')
+            }
+    except:
+        return {'enabled': False, 'username': 'admin', 'password': 'admin'}
+
+AUTH_CONFIG = load_auth_config()
+
+def login_required(f):
+    """Decorator to require login for admin pages"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not AUTH_CONFIG['enabled']:
+            return f(*args, **kwargs)
+        if not session.get('logged_in'):
+            return redirect(url_for('login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 def get_db_connection():
     """Create database connection"""
@@ -42,6 +76,34 @@ def parse_iso_timestamp(iso_string):
         return datetime.fromisoformat(iso_string)
     except:
         return None
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    """Login page for admin access"""
+    if not AUTH_CONFIG['enabled']:
+        # If auth is disabled, just redirect to home
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        if username == AUTH_CONFIG['username'] and password == AUTH_CONFIG['password']:
+            session['logged_in'] = True
+            session['username'] = username
+            next_page = request.args.get('next')
+            return redirect(next_page or url_for('index'))
+        else:
+            flash('Invalid username or password', 'error')
+    
+    return render_template('login.html')
+
+@app.route('/logout')
+def logout():
+    """Logout and clear session"""
+    session.clear()
+    flash('You have been logged out', 'success')
+    return redirect(url_for('index'))
 
 @app.route('/')
 def index():
@@ -514,6 +576,7 @@ def get_logs():
         })
 
 @app.route('/logs')
+@login_required
 def logs_page():
     """Display logs page"""
     return render_template('logs.html')
@@ -559,6 +622,7 @@ def get_uptime():
         })
 
 @app.route('/admin')
+@login_required
 def admin_page():
     """Database maintenance page - browse, edit, delete entries"""
     conn, db_type = get_db_connection()
@@ -594,6 +658,7 @@ def admin_page():
     )
 
 @app.route('/api/delete/<int:song_id>', methods=['POST'])
+@login_required
 def delete_song(song_id):
     """Delete a song entry"""
     try:
@@ -614,6 +679,7 @@ def delete_song(song_id):
         }), 500
 
 @app.route('/api/edit/<int:song_id>', methods=['POST'])
+@login_required
 def edit_song(song_id):
     """Edit a song entry"""
     try:
@@ -650,6 +716,7 @@ def edit_song(song_id):
         }), 500
 
 @app.route('/settings')
+@login_required
 def settings_page():
     """Settings management page"""
     import json
@@ -719,6 +786,7 @@ def get_setting_api(key):
         return jsonify({'success': False, 'error': 'Setting not found'}), 404
 
 @app.route('/api/settings/<key>', methods=['POST'])
+@login_required
 def update_setting(key):
     """Update a specific setting"""
     import json
@@ -771,6 +839,7 @@ def get_stations():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/stations/<int:station_id>/toggle', methods=['POST'])
+@login_required
 def toggle_station(station_id):
     """Toggle station enabled/disabled"""
     try:
@@ -819,6 +888,7 @@ def toggle_station_priority(station_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/stations', methods=['POST'])
+@login_required
 def add_station():
     """Add a new station"""
     try:
@@ -856,6 +926,7 @@ def add_station():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/stations/<int:station_id>', methods=['DELETE'])
+@login_required
 def delete_station(station_id):
     """Delete a station"""
     try:
