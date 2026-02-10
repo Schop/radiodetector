@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RadioDetector - Song Tracker</title>
-    <link rel="stylesheet" href="/static/pico.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="/static/style.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -12,16 +12,13 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 </head>
 <body>
-    <nav class="container-fluid" style="padding: 1rem 2rem;">
-        <ul>
-            <li><strong>📻 Radio Checker</strong></li>
-        </ul>
-        <ul>
-            <li><a href="/" class="contrast">Dashboard</a></li>
-            <li><a href="/logs">Logs</a></li>
-        </ul>
-    </nav>
     <main>
+        <nav>
+            <ul>
+                <li><a href="/">Dashboard</a></li>
+                <li><a href="/logs" class="contrast">Logs</a></li>
+            </ul>
+        </nav>
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 30px;">
             <div>
                 <h1>Radio Detector</h1>

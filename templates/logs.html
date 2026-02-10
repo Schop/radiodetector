@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Radio Checker - Logs</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='pico.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="/static/style.css">
     <style>
         #log-container {
             background: #1a1a1a;
@@ -31,17 +31,14 @@
     </style>
 </head>
 <body>
-    <main class="container">
+
+    <main>
         <nav>
-            <ul>
-                <li><strong>📻 Radio Checker</strong></li>
-            </ul>
             <ul>
                 <li><a href="/">Dashboard</a></li>
                 <li><a href="/logs" class="contrast">Logs</a></li>
             </ul>
         </nav>
-
         <h1>📋 Live Logs</h1>
 
         <div class="log-controls">
