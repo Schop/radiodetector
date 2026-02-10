@@ -24,13 +24,16 @@ def log_print(message, color='', style=''):
     else:
         print(message)
     
-    # Write to log file (without color codes)
-    try:
-        with open(LOG_FILE, 'a', encoding='utf-8') as f:
-            timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-            f.write(f"[{timestamp}] {message}\n")
-    except Exception as e:
-        print(f"Warning: Could not write to log file: {e}")
+    # Only write to log file explicitly if stdout is a terminal (not redirected)
+    # When running as systemd service, stdout is redirected to radio.log
+    # so we don't need to write to file explicitly (avoids duplicates)
+    if sys.stdout.isatty():
+        try:
+            with open(LOG_FILE, 'a', encoding='utf-8') as f:
+                timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                f.write(f"[{timestamp}] {message}\n")
+        except Exception as e:
+            print(f"Warning: Could not write to log file: {e}")
 
 # Database setup
 conn = sqlite3.connect('radio_songs.db')
