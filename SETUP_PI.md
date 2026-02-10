@@ -32,6 +32,8 @@ Press `Ctrl+C` to stop when done testing.
 
 ### 3. Install as Systemd Services
 
+**Important:** The service files use username `schop`. If your username is different, edit the service files first and replace `schop` with your username.
+
 ```bash
 # Copy service files to systemd directory
 sudo cp radiochecker.service /etc/systemd/system/
