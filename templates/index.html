@@ -74,19 +74,26 @@
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
                                 <h6>Top Radiostations</h6>
+                                <small class="text-muted">klik op de balken voor meer details</small>
                                 <canvas id="stationsChart" style="max-height: 250px;"></canvas>
                             </div>
                             <div class="col-md-6">
-                                <h6>Detecties per uur</h6>
-                                <canvas id="hoursChart" style="max-height: 250px;"></canvas>
+                                <h6>Top 5 Nummers</h6>
+                                <small class="text-muted">klik op de balken voor meer details</small>
+                                <canvas id="songsChart" style="max-height: 250px;"></canvas>
                             </div>
+
                         </div>
                         <div class="row g-3">
-                            <div class="col-md-6">
+                            <div class="col-md-4">
                                 <h6>Detecties per dag van de week</h6>
                                 <canvas id="weekdaysChart" style="max-height: 250px;"></canvas>
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-4">
+                                <h6>Detecties per uur</h6>
+                                <canvas id="hoursChart" style="max-height: 250px;"></canvas>
+                            </div>                            
+                            <div class="col-md-4">
                                 <h6>Trend in de laatste 14 dagen</h6>
                                 <canvas id="timelineChart" style="max-height: 250px;"></canvas>
                             </div>
@@ -114,11 +121,14 @@
                         animation: false, // Disable animations for better performance
                         plugins: {
                             legend: { display: false }
+                        },
+                        onHover: (event, elements) => {
+                            event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
                         }
                     };
                     
                     // Stations chart (horizontal bar)
-                    new Chart(document.getElementById('stationsChart'), {
+                    const stationsChart = new Chart(document.getElementById('stationsChart'), {
                         type: 'bar',
                         data: {
                             labels: data.stations.labels,
@@ -135,6 +145,42 @@
                             indexAxis: 'y',
                             scales: {
                                 x: { beginAtZero: true, ticks: { precision: 0 } }
+                            },
+                            onClick: (event, elements) => {
+                                if (elements.length > 0) {
+                                    const index = elements[0].index;
+                                    const station = data.stations.labels[index];
+                                    window.location.href = `/station/${encodeURIComponent(station)}`;
+                                }
+                            }
+                        }
+                    });
+                    
+                    // Songs chart (horizontal bar)
+                    const songsChart = new Chart(document.getElementById('songsChart'), {
+                        type: 'bar',
+                        data: {
+                            labels: data.songs.labels,
+                            datasets: [{
+                                label: 'Detections',
+                                data: data.songs.data,
+                                backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                                borderColor: 'rgba(255, 99, 132, 1)',
+                                borderWidth: 1
+                            }]
+                        },
+                        options: {
+                            ...commonOptions,
+                            indexAxis: 'y',
+                            scales: {
+                                x: { beginAtZero: true, ticks: { precision: 0 } }
+                            },
+                            onClick: (event, elements) => {
+                                if (elements.length > 0) {
+                                    const index = elements[0].index;
+                                    const song = data.songs.labels[index];
+                                    window.location.href = `/song/${encodeURIComponent(song)}`;
+                                }
                             }
                         }
                     });

@@ -408,6 +408,16 @@ def chart_data():
     """)
     stations_data = c.fetchall()
     
+    # Top songs (top 5)
+    c.execute("""
+        SELECT song, COUNT(*) as count
+        FROM songs
+        GROUP BY song
+        ORDER BY count DESC
+        LIMIT 5
+    """)
+    songs_data = c.fetchall()
+    
     # Songs by hour of day
     db.execute_query(c, "SELECT timestamp FROM songs", db_type=db_type)
     all_songs = c.fetchall()
@@ -441,6 +451,10 @@ def chart_data():
         'stations': {
             'labels': [row['station'] for row in stations_data],
             'data': [row['count'] for row in stations_data]
+        },
+        'songs': {
+            'labels': [row['song'] for row in songs_data],
+            'data': [row['count'] for row in songs_data]
         },
         'hours': {
             'labels': [f"{h}:00" for h in range(24)],
