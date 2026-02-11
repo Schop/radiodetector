@@ -50,6 +50,14 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
+@app.context_processor
+def inject_auth_status():
+    """Make authentication status available to all templates"""
+    return {
+        'auth_enabled': AUTH_CONFIG['enabled'],
+        'logged_in': session.get('logged_in', False)
+    }
+
 def get_db_connection():
     """Create database connection"""
     conn, db_type = db.get_dict_connection()
