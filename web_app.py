@@ -186,6 +186,12 @@ def index():
     db.execute_query(c, "SELECT DISTINCT song FROM songs ORDER BY song", db_type=db_type)
     song_titles = [row['song'] for row in c.fetchall()]
     
+    # Get today's count
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    db.execute_query(c, "SELECT COUNT(*) as today_count FROM songs WHERE timestamp LIKE ?", (f"{today_date}%",), db_type=db_type)
+    today_count_row = c.fetchone()
+    today_count = today_count_row['today_count'] if today_count_row else 0
+    
     conn.close()
     
     # Convert timestamps to readable format
@@ -217,6 +223,7 @@ def index():
         stations=stations,
         song_titles=song_titles,
         total_count=len(songs_data),
+        today_count=today_count,
         first_timestamp=first_timestamp,
         last_timestamp=last_timestamp,
         title="Phil Collins Detector"

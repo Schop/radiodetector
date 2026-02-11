@@ -322,6 +322,12 @@ def index_data():
     # Get target artists
     target_artists = get_setting('target_artists', [])
     
+    # Get today's count
+    from datetime import datetime
+    today_date = datetime.now().strftime('%Y-%m-%d')
+    c.execute("SELECT COUNT(*) FROM songs WHERE timestamp LIKE ?", (f"{today_date}%",))
+    today_count = c.fetchone()[0]
+    
     conn.close()
     
     # Format songs
@@ -343,6 +349,7 @@ def index_data():
         'song_titles': song_titles,
         'target_artists': target_artists,
         'total_count': len(songs_data),
+        'today_count': today_count,
         'first_timestamp': first_timestamp,
         'last_timestamp': last_timestamp
     }

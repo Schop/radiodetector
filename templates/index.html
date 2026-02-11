@@ -31,12 +31,11 @@
             <div class="col-md-4 mb-2">
                 <div class="card h-100">
                     <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">Phil Detecties: <strong>{{ total_count }}</strong></li>
-                            <li class="list-group-item">Unieke Stations: <strong>{{ stations|length }}</strong></li>
-                            <li class="list-group-item">Unieke Nummers: <strong>{{ song_titles|length }}</strong></li>
-                            <li class="list-group-item">Meest recent: <strong>{{ last_timestamp }}</strong></li>
-                        </ul>
+                        <h5>Phil detecties vandaag: <strong>{{ today_count }}</strong></h5>
+                        <p>Sinds {{ footer_first_timestamp }} is Phil Collins {{ total_count }} keer gedetecteerd,
+                             op {{ stations|length }} verschillende radiozenders,
+                              met {{ song_titles|length }} verschillende nummers.
+                        </p>
                     </div>
                 </div>
             </div>
