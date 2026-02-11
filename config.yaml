@@ -1,0 +1,98 @@
+# Radio Station Configuration
+# Comment out stations with # to disable them
+
+# Database configuration
+# Set type to 'sqlite' or 'mysql'
+database:
+  type: sqlite  # Using local SQLite database
+  # SQLite settings (used when type = sqlite)
+  sqlite_file: radio_songs.db
+  # MySQL settings (used when type = mysql)
+  mysql_host: sql7.freesqldatabase.com
+  mysql_port: 3306
+  mysql_user: sql7816777
+  mysql_password: EusbhwFIKb
+  mysql_database: sql7816777
+
+# Web interface authentication
+# Protects settings, maintenance, and delete operations
+web_auth:
+  enabled: true
+  username: admin
+  password: Phil.19720104  # ⚠️ CHANGE THIS!
+
+# Target artists and songs to check
+target_artists:
+  - Phil Collins
+  - Genesis
+
+target_songs:
+  - Africa
+
+# Stations that should prioritize myonlineradio (e.g., due to relisten.nl homepage rotation)
+priority_myonlineradio:
+  - "538"
+  - NPO 3FM
+  - Q Music
+  - Sky Radio
+  - Radio Veronica
+  - Radio 10
+  - NPO Radio 1
+  - NPO Radio 2
+  - NPO Radio 5
+  - JOE
+
+relisten:
+  SLAM!: slam
+  "538": 538
+  NPO 3FM: 3fm
+  Q Music: qmusic
+  100% NL: 100p
+  Sky Radio: skyradio
+  Radio Veronica: veronica
+  Radio 10: radio10
+  Arrow Classic Rock: arrow
+  RadioNL: radionl
+  NPO Radio 1: radio1
+  NPO Radio 2: radio2
+  NPO Radio 5: radio5
+  KINK: kink
+  JOE: joe
+  # Note: Homepage rotates ~19 stations at a time
+
+myonlineradio:
+  100% NL: 100procent-nl
+  Arrow Classic Rock: arrow-classic-rock
+  JOE: joe
+  KINK: kink
+  NPO 3FM: npo-3fm
+  NPO Radio 1: npo-radio-1
+  NPO Radio 2: npo-radio-2
+  NPO Radio 5: npo-radio-5
+  Q Music: q-music
+  Radio 10: radio-10
+  "538": radio-538
+  RadioNL: radionl
+  Sky Radio: sky-radio
+  SLAM!: slam
+  Radio Veronica: veronica
+  Omroep Brabant: omroep-brabant
+  Omroep Gelderland: omroep-gelderland
+  L1 radio: l1-radio
+  Radio Noordzee: radio-noordzee
+
+playlist24:
+  100% NL: 100pnl-playlist
+  Arrow Classic Rock: arrow-classic-rock-playlist
+  KINK: kink-playlist
+  NPO 3FM: 3fm-playlist
+  NPO Radio 1: radio-1-playlist
+  NPO Radio 2: radio-2-playlist
+  NPO Radio 5: radio-5-playlist
+  Q Music: qmusic-playlist
+  Radio 10: radio-10-playlist
+  "538": radio-538-playlist
+  Simone FM: simonefm-playlist
+  Sky Radio: skyradio-playlist
+  SLAM!: slamfm-playlist
+  Sublime FM: sublime-fm-playlist

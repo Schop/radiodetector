@@ -1085,17 +1085,17 @@ def delete_station(station_id):
 if __name__ == '__main__':
     # Check if database exists
     if not os.path.exists(DB_PATH):
-        print(f"Error: {DB_PATH} not found!")
-        print("Make sure main.py has run at least once to create the database.")
-        exit(1)
+        print(f"Warning: {DB_PATH} not found!")
+        print("Database will be created when main.py runs.")
+    
+    # Get port from environment variable (for Render/cloud hosting) or use 5000
+    port = int(os.environ.get('PORT', 5000))
     
     print("RadioDetector Web Server")
     print("=" * 50)
-    print("Starting Flask app on http://0.0.0.0:5000")
-    print("Access from: http://localhost:5000")
-    print("Or from other machines: http://<your-pi-ip>:5000")
+    print(f"Starting Flask app on http://0.0.0.0:{port}")
     print("=" * 50)
     
     # Run on all interfaces (so it's accessible from other machines)
     # Debug mode disabled for production use
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=port, debug=False)

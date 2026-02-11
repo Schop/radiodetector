@@ -2,8 +2,9 @@
 *.db
 *.db-journal
 
-# Configuration with credentials
-config.yaml
+# Configuration with credentials - COMMENTED OUT for Render deployment
+# Make sure to change passwords in config.yaml before pushing to GitHub!
+# config.yaml
 
 # Log files
 *.log

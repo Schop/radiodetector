@@ -1,0 +1,23 @@
+services:
+  # Web service (Flask app)
+  - type: web
+    name: radiochecker-web
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python web_app.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+    
+  # Background worker (radio checker)
+  - type: worker
+    name: radiochecker-checker
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python main.py
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+# Optional: Database (SQLite is stored on disk automatically)
+# Render free tier includes persistent disk storage
