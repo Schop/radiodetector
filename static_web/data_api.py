@@ -246,24 +246,81 @@ def song_charts(song_name):
         }
     }
 
-def station_data(station_name):
-    """Get data for station page"""
+def artist_charts(artist_name):
+    """Charts for specific artist"""
     conn, db_type = get_db_connection()
     c = conn.cursor()
     
-    # Get all songs from station
-    c.execute("SELECT * FROM songs WHERE station = ? ORDER BY timestamp DESC", (station_name,))
+    # Plays by hour
+    c.execute("SELECT timestamp FROM songs WHERE artist = ?", (artist_name,))
     songs = c.fetchall()
     
-    total_songs = len(songs)
+    hours = [0] * 24
+    for row in songs:
+        ts = parse_iso_timestamp(row[0])
+        if ts:
+            hours[ts.hour] += 1
     
-    # Unique artists
-    c.execute("SELECT DISTINCT artist FROM songs WHERE station = ? ORDER BY artist", (station_name,))
-    artists = [row[0] for row in c.fetchall()]
+    # Top songs by this artist
+    c.execute("""
+        SELECT song, COUNT(*) as count
+        FROM songs
+        WHERE artist = ?
+        GROUP BY song
+        ORDER BY count DESC
+        LIMIT 10
+    """, (artist_name,))
+    top_songs = c.fetchall()
     
-    # Unique songs
-    c.execute("SELECT DISTINCT song FROM songs WHERE station = ? ORDER BY song", (station_name,))
+    conn.close()
+    
+    return {
+        'hours': {
+            'labels': [f"{h}:00" for h in range(24)],
+            'data': hours
+        },
+        'top_songs': {
+            'labels': [row[0] for row in top_songs],
+            'data': [row[1] for row in top_songs]
+        }
+    }
+
+def index_data():
+    """Get data for index page"""
+    conn, db_type = get_db_connection()
+    c = conn.cursor()
+    
+    # Get all songs (limit 1000)
+    c.execute("SELECT * FROM songs ORDER BY timestamp DESC LIMIT 1000")
+    songs = c.fetchall()
+    
+    # Get first and last timestamps
+    c.execute("SELECT MIN(timestamp), MAX(timestamp) FROM songs")
+    ts_row = c.fetchone()
+    first_ts = ts_row[0]
+    last_ts = ts_row[1]
+    
+    first_timestamp = None
+    last_timestamp = None
+    if first_ts:
+        ts = parse_iso_timestamp(first_ts)
+        if ts:
+            first_timestamp = ts.strftime('%d %b %Y om %H:%M').replace(' 0', ' ')
+    if last_ts:
+        ts = parse_iso_timestamp(last_ts)
+        if ts:
+            last_timestamp = ts.strftime('%d %b %Y om %H:%M').replace(' 0', ' ')
+    
+    # Get unique stations
+    c.execute("SELECT DISTINCT station FROM songs ORDER BY station")
+    stations = [row[0] for row in c.fetchall()]
+    
+    # Get unique song titles
+    c.execute("SELECT DISTINCT song FROM songs ORDER BY song")
     song_titles = [row[0] for row in c.fetchall()]
+    
+    # Get target artists
+    target_artists = get_setting('target_artists', [])
     
     conn.close()
     
@@ -271,7 +328,7 @@ def station_data(station_name):
     songs_data = []
     for song in songs:
         ts = parse_iso_timestamp(song[3])
-        ts_formatted = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ') if ts else song[3]
+        ts_formatted = ts.strftime('%d %b %Y om %H:%M').replace(' 0', ' ') if ts else song[3]
         songs_data.append({
             'station': song[1],
             'artist': song[2],
@@ -281,12 +338,40 @@ def station_data(station_name):
         })
     
     return {
-        'station_name': station_name,
-        'total_songs': total_songs,
-        'artists': artists,
+        'songs': songs_data,
+        'stations': stations,
         'song_titles': song_titles,
-        'songs': songs_data
+        'target_artists': target_artists,
+        'total_count': len(songs_data),
+        'first_timestamp': first_timestamp,
+        'last_timestamp': last_timestamp
     }
+
+def export_csv():
+    """Export songs as CSV"""
+    import csv
+    import io
+    
+    conn, db_type = get_db_connection()
+    c = conn.cursor()
+    c.execute("SELECT station, artist, song, timestamp FROM songs ORDER BY timestamp DESC")
+    rows = c.fetchall()
+    conn.close()
+    
+    # Create CSV
+    output = io.StringIO()
+    writer = csv.writer(output)
+    writer.writerow(['Station', 'Artist', 'Song', 'Detected At'])
+    for row in rows:
+        writer.writerow(row)
+    
+    csv_data = output.getvalue()
+    
+    # For CGI, output headers and content
+    print("Content-Type: text/csv")
+    print("Content-Disposition: attachment; filename=radio_songs.csv")
+    print()
+    print(csv_data)
 
 def main():
     """Main CGI handler"""
