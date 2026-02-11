@@ -333,7 +333,7 @@ def chart_data():
         FROM songs 
         GROUP BY station 
         ORDER BY count DESC 
-        LIMIT 10
+        LIMIT 5
     """)
     stations_data = c.fetchall()
     
