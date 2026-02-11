@@ -456,6 +456,72 @@ def chart_data():
         }
     }
 
+@app.route('/api/now-playing')
+def now_playing():
+    """Get currently playing songs by target artists (detected in last 10 minutes)"""
+    try:
+        conn, db_type = get_db_connection()
+        c = db.get_dict_cursor(conn, db_type)
+        
+        # Get target artists
+        target_artists = get_setting('target_artists', [])
+        
+        if not target_artists:
+            return jsonify({'success': True, 'playing': []})
+        
+        # Get songs detected in last 10 minutes - most recent per station
+        cutoff_time = (datetime.now() - timedelta(minutes=10)).isoformat()
+        
+        # Get all stations that have songs in the last 10 minutes
+        db.execute_query(c, "SELECT DISTINCT station FROM songs WHERE timestamp > ?", (cutoff_time,), db_type)
+        stations = [row['station'] for row in c.fetchall()]
+        
+        # Get the most recent song for each station
+        now_playing_list = []
+        for station in stations:
+            db.execute_query(c, """
+                SELECT station, artist, song, timestamp
+                FROM songs
+                WHERE station = ? AND timestamp > ?
+                ORDER BY timestamp DESC
+                LIMIT 1
+            """, (station, cutoff_time), db_type)
+            
+            song_data = c.fetchone()
+            if song_data and song_data['artist'] in target_artists:
+                ts = parse_iso_timestamp(song_data['timestamp'])
+                if ts:
+                    time_ago = datetime.now() - ts
+                    minutes_ago = int(time_ago.total_seconds() / 60)
+                    if minutes_ago == 0:
+                        time_ago_str = 'Just now'
+                    elif minutes_ago == 1:
+                        time_ago_str = '1 min ago'
+                    else:
+                        time_ago_str = f'{minutes_ago} mins ago'
+                else:
+                    time_ago_str = 'Recently'
+                
+                now_playing_list.append({
+                    'station': song_data['station'],
+                    'artist': song_data['artist'],
+                    'song': song_data['song'],
+                    'time_ago': time_ago_str
+                })
+        
+        conn.close()
+        
+        return jsonify({
+            'success': True,
+            'playing': now_playing_list
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'playing': []
+        })
+
 @app.route('/api/station/<station_name>/charts')
 def station_charts(station_name):
     """Get chart data for a specific station (hourly and weekday distribution)"""
