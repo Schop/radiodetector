@@ -34,7 +34,7 @@
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item">Phil Detecties: <strong>{{ total_count }}</strong></li>
                             <li class="list-group-item">Unieke Stations: <strong>{{ stations|length }}</strong></li>
-                            <li class="list-group-item">Unieke Liedjes: <strong>{{ song_titles|length }}</strong></li>
+                            <li class="list-group-item">Unieke Nummers: <strong>{{ song_titles|length }}</strong></li>
                             <li class="list-group-item">Meest recent: <strong>{{ last_timestamp }}</strong></li>
                         </ul>
                     </div>
@@ -43,7 +43,7 @@
             <div class="col-md-4 mb-2">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h6 class="card-title"><i class="bi bi-person-bounding-box"></i> GedetecteerdeArtiesten</h6>
+                        <h6 class="card-title"><i class="bi bi-person-bounding-box"></i> Gedetecteerde Artiesten</h6>
                         {% if target_artists %}
                         <ul class="list-group list-group-flush">
                             {% for artist in target_artists %}
@@ -279,7 +279,7 @@
                                 container.innerHTML = `
                                     <div class="text-center text-muted py-3">
                                         <i class="bi bi-music-note-beamed" style="font-size: 2rem;"></i>
-                                        <p class="mb-0 mt-2">Phil is nu niet op de radio</p>
+                                        <p class="mb-0 mt-2">Heerlijk, Phil is nu niet op de radio</p>
                                     </div>
                                 `;
                             }

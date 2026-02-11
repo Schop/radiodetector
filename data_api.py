@@ -73,7 +73,7 @@ def chart_data():
     
     conn.close()
     
-    day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    day_names = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
     
     return {
         'stations': {
@@ -184,7 +184,7 @@ def station_charts(station_name):
     
     conn.close()
     
-    day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    day_names = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
     
     return {
         'hours': {
