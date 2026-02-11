@@ -1,0 +1,154 @@
+#!/usr/bin/env python3
+"""
+Upload SQLite database to STRATO hosting via SFTP
+Only uploads when database has changed (checks file hash)
+
+COPY THIS FILE TO upload_db.py AND ADD YOUR CREDENTIALS
+"""
+
+import os
+import hashlib
+import time
+from datetime import datetime
+
+# SFTP Configuration
+SFTP_CONFIG = {
+    'host': 'your-server.ssh.w2.strato.hosting',
+    'port': 22,
+    'username': 'your_username',
+    'password': 'YOUR_PASSWORD_HERE',
+    'remote_path': '/your-path/radio_songs.db',
+    'local_db': 'radio_songs.db'
+}
+
+# Track last upload
+HASH_FILE = '.db_upload_hash'
+LOG_FILE = 'upload.log'
+
+def log(message):
+    """Log message to both console and file"""
+    timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    log_message = f"[{timestamp}] {message}"
+    print(log_message)
+    with open(LOG_FILE, 'a') as f:
+        f.write(log_message + '\n')
+
+def get_file_hash(filepath):
+    """Calculate MD5 hash of file"""
+    hash_md5 = hashlib.md5()
+    try:
+        with open(filepath, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_md5.update(chunk)
+        return hash_md5.hexdigest()
+    except Exception as e:
+        log(f"Error calculating hash: {e}")
+        return None
+
+def get_last_hash():
+    """Get hash from last upload"""
+    try:
+        with open(HASH_FILE, 'r') as f:
+            return f.read().strip()
+    except:
+        return None
+
+def save_hash(hash_value):
+    """Save hash of uploaded file"""
+    with open(HASH_FILE, 'w') as f:
+        f.write(hash_value)
+
+def upload_via_sftp():
+    """Upload database file via SFTP"""
+    try:
+        import paramiko
+        
+        # Create SFTP connection
+        transport = paramiko.Transport((SFTP_CONFIG['host'], SFTP_CONFIG['port']))
+        transport.connect(username=SFTP_CONFIG['username'], password=SFTP_CONFIG['password'])
+        sftp = paramiko.SFTPClient.from_transport(transport)
+        
+        # Upload file
+        log(f"Uploading {SFTP_CONFIG['local_db']} to {SFTP_CONFIG['remote_path']}...")
+        sftp.put(SFTP_CONFIG['local_db'], SFTP_CONFIG['remote_path'])
+        
+        # Close connection
+        sftp.close()
+        transport.close()
+        
+        log("✅ Upload successful via SFTP")
+        return True
+        
+    except ImportError:
+        log("⚠️  paramiko not installed. Install with: pip3 install paramiko")
+        return False
+    except Exception as e:
+        log(f"❌ SFTP upload failed: {e}")
+        return False
+
+def upload_via_ftp():
+    """Fallback: Upload via FTP"""
+    try:
+        from ftplib import FTP
+        
+        log("Trying FTP upload...")
+        ftp = FTP()
+        ftp.connect(SFTP_CONFIG['host'].replace('.ssh.', '.'), 21)  # Try standard FTP
+        ftp.login(SFTP_CONFIG['username'], SFTP_CONFIG['password'])
+        
+        with open(SFTP_CONFIG['local_db'], 'rb') as f:
+            ftp.storbinary(f'STOR {SFTP_CONFIG["remote_path"]}', f)
+        
+        ftp.quit()
+        log("✅ Upload successful via FTP")
+        return True
+        
+    except Exception as e:
+        log(f"❌ FTP upload failed: {e}")
+        return False
+
+def main():
+    """Main upload logic"""
+    log("=" * 60)
+    log("Radio Songs Database Upload")
+    
+    # Check if database exists
+    if not os.path.exists(SFTP_CONFIG['local_db']):
+        log(f"❌ Database file not found: {SFTP_CONFIG['local_db']}")
+        return
+    
+    # Get current hash
+    current_hash = get_file_hash(SFTP_CONFIG['local_db'])
+    if not current_hash:
+        log("❌ Could not calculate file hash")
+        return
+    
+    # Get last uploaded hash
+    last_hash = get_last_hash()
+    
+    # Check if upload is needed
+    if current_hash == last_hash:
+        log("✓ Database unchanged, skipping upload")
+        return
+    
+    file_size = os.path.getsize(SFTP_CONFIG['local_db'])
+    log(f"Database changed (size: {file_size:,} bytes), uploading...")
+    
+    # Try SFTP first, then FTP
+    success = upload_via_sftp() or upload_via_ftp()
+    
+    if success:
+        save_hash(current_hash)
+        log(f"✅ Upload complete (hash: {current_hash[:8]}...)")
+    else:
+        log("❌ All upload methods failed")
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        log("\n⚠️  Upload cancelled by user")
+    except Exception as e:
+        log(f"❌ Unexpected error: {e}")
+        import traceback
+        traceback.print_exc()
