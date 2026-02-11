@@ -16,6 +16,13 @@ cgitb.enable()
 # Database path - adjust as needed
 DB_PATH = 'radio_songs.db'
 
+def format_date_no_leading_zero(dt, format_str):
+    """Format datetime without leading zeros in day, cross-platform compatible"""
+    formatted = dt.strftime(format_str)
+    # Remove leading zero from day only (matches '^0' at start of string)
+    import re
+    return re.sub(r'^0(\d)', r'\1', formatted)
+
 def get_db_connection():
     """Get database connection"""
     return sqlite3.connect(DB_PATH), 'sqlite'
@@ -305,11 +312,11 @@ def index_data():
     if first_ts:
         ts = parse_iso_timestamp(first_ts)
         if ts:
-            first_timestamp = ts.strftime('%d %b %Y om %H:%M').replace(' 0', ' ')
+            first_timestamp = format_date_no_leading_zero(ts, '%d %b %Y om %H:%M')
     if last_ts:
         ts = parse_iso_timestamp(last_ts)
         if ts:
-            last_timestamp = ts.strftime('%d %b %Y om %H:%M').replace(' 0', ' ')
+            last_timestamp = format_date_no_leading_zero(ts, '%d %b %Y om %H:%M')
     
     # Get unique stations
     c.execute("SELECT DISTINCT station FROM songs ORDER BY station")
@@ -334,7 +341,7 @@ def index_data():
     songs_data = []
     for song in songs:
         ts = parse_iso_timestamp(song[3])
-        ts_formatted = ts.strftime('%d %b %Y om %H:%M').replace(' 0', ' ') if ts else song[3]
+        ts_formatted = format_date_no_leading_zero(ts, '%d %b %Y om %H:%M') if ts else song[3]
         songs_data.append({
             'station': song[1],
             'artist': song[2],

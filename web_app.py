@@ -14,6 +14,13 @@ import secrets
 from functools import wraps
 import db_connection as db
 
+def format_date_no_leading_zero(dt, format_str):
+    """Format datetime without leading zeros in day, cross-platform compatible"""
+    formatted = dt.strftime(format_str)
+    # Remove leading zero from day only (matches '^0' at start of string)
+    import re
+    return re.sub(r'^0(\d)', r'\1', formatted)
+
 app = Flask(__name__)
 # Generate a random secret key for sessions
 app.secret_key = secrets.token_hex(32)
@@ -174,7 +181,7 @@ def index():
     if last_timestamp_raw:
         ts = parse_iso_timestamp(last_timestamp_raw)
         if ts:
-            last_timestamp = ts.strftime('%d %b %Y om %H:%M').replace(' 0', ' ')
+            last_timestamp = format_date_no_leading_zero(ts, '%d %b %Y om %H:%M')
         else:
             last_timestamp = last_timestamp_raw
     
@@ -200,7 +207,7 @@ def index():
         ts = parse_iso_timestamp(song['timestamp'])
         # Format: "10:46, 2 Feb 2026" (use %#d for Windows, %d and strip for others)
         if ts:
-            ts_formatted = ts.strftime('%d %b %Y om %H:%M').replace(' 0', ' ')
+            ts_formatted = format_date_no_leading_zero(ts, '%d %b %Y om %H:%M')
         else:
             ts_formatted = song['timestamp']
         songs_data.append({
@@ -257,7 +264,7 @@ def station_detail(station_name):
     for song in songs:
         ts = parse_iso_timestamp(song['timestamp'])
         if ts:
-            ts_formatted = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ')
+            ts_formatted = format_date_no_leading_zero(ts, '%d %b %Y om %H:%M')
         else:
             ts_formatted = song['timestamp']
         songs_data.append({
@@ -312,7 +319,7 @@ def song_detail(song_name):
     for song in songs:
         ts = parse_iso_timestamp(song['timestamp'])
         if ts:
-            ts_formatted = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ')
+            ts_formatted = format_date_no_leading_zero(ts, '%d %b %Y om %H:%M')
         else:
             ts_formatted = song['timestamp']
         songs_data.append({
@@ -374,7 +381,7 @@ def artist_detail(artist_name):
     for song in songs:
         ts = parse_iso_timestamp(song['timestamp'])
         if ts:
-            ts_formatted = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ')
+            ts_formatted = format_date_no_leading_zero(ts, '%d %b %Y om %H:%M')
         else:
             ts_formatted = song['timestamp']
         songs_data.append({
