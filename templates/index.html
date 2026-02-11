@@ -16,11 +16,11 @@
             <div class="col-md-4 mb-2">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h6 class="card-title"><i class="bi bi-graph-up"></i> Statistics</h6>
                         <ul class="list-group list-group-flush">
                             <li class="list-group-item">Total Detections: <strong>{{ total_count }}</strong></li>
                             <li class="list-group-item">Unique Stations: <strong>{{ stations|length }}</strong></li>
                             <li class="list-group-item">Unique Songs: <strong>{{ song_titles|length }}</strong></li>
+                            <li class="list-group-item">Most recent: <strong>{{ last_timestamp }}</strong></li>
                         </ul>
                     </div>
                 </div>
@@ -43,24 +43,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-2">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <h6 class="card-title"><i class="bi bi-mic"></i> Tracking Songs</h6>
-                    {% if target_songs %}
-                        <ul class="list-group list-group-flush">
-                            {% for song in target_songs %}
-                            <li class="list-group-item"><a href="/song/{{ song }}" class="station-link">{{ song }}</a></li>
-                            {% endfor %}
-                        </ul>
-                    {% else %}
-                        <ul class="list-group list-group-flush">
-                            <li class="list-group-item">None</li>
-                        </ul>
-                    {% endif %}
-                    </div>
-                </div>
-            </div>
+
         </div>
         <!-- Charts -->
         <div class="accordion mb-4" id="statsAccordion">
@@ -261,10 +244,7 @@
             </div>
         {% endif %}
         
-        <hr>
-        <footer class="text-center text-muted">
-            <p>Phil Collins Detector v1.0  • Page auto-refreshes every 5 minutes</p>
-        </footer>
+        {% include 'includes/footer.html' %}
         </main>
     </div>
 </body>

@@ -58,6 +58,38 @@ def inject_auth_status():
         'logged_in': session.get('logged_in', False)
     }
 
+@app.context_processor
+def inject_footer_data():
+    """Make footer data available to all templates"""
+    try:
+        conn, db_type = get_db_connection()
+        c = db.get_dict_cursor(conn, db_type)
+        
+        # Get first (earliest) timestamp
+        db.execute_query(c, "SELECT MIN(timestamp) as first_timestamp FROM songs", db_type=db_type)
+        timestamp_row = c.fetchone()
+        conn.close()
+        
+        first_timestamp_raw = timestamp_row['first_timestamp'] if timestamp_row else None
+        
+        # Format timestamp
+        if first_timestamp_raw:
+            ts = parse_iso_timestamp(first_timestamp_raw)
+            if ts:
+                first_timestamp = ts.strftime('%d %b %Y').replace(' 0', ' ')
+            else:
+                first_timestamp = first_timestamp_raw
+        else:
+            first_timestamp = 'N/A'
+        
+        return {
+            'footer_first_timestamp': first_timestamp
+        }
+    except:
+        return {
+            'footer_first_timestamp': 'N/A'
+        }
+
 def get_db_connection():
     """Create database connection"""
     conn, db_type = db.get_dict_connection()
@@ -123,6 +155,29 @@ def index():
     db.execute_query(c, "SELECT * FROM songs ORDER BY timestamp DESC LIMIT 1000", db_type=db_type)
     songs = c.fetchall()
     
+    # Get first (earliest) and last (latest) timestamps
+    db.execute_query(c, "SELECT MIN(timestamp) as first_timestamp, MAX(timestamp) as last_timestamp FROM songs", db_type=db_type)
+    timestamp_row = c.fetchone()
+    first_timestamp_raw = timestamp_row['first_timestamp'] if timestamp_row else None
+    last_timestamp_raw = timestamp_row['last_timestamp'] if timestamp_row else None
+    
+    # Format first and last timestamps
+    first_timestamp = None
+    last_timestamp = None
+    if first_timestamp_raw:
+        ts = parse_iso_timestamp(first_timestamp_raw)
+        if ts:
+            first_timestamp = ts.strftime('%c').replace(' 0', ' ')
+        else:
+            first_timestamp = first_timestamp_raw
+    
+    if last_timestamp_raw:
+        ts = parse_iso_timestamp(last_timestamp_raw)
+        if ts:
+            last_timestamp = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ')
+        else:
+            last_timestamp = last_timestamp_raw
+    
     # Get unique stations
     db.execute_query(c, "SELECT DISTINCT station FROM songs ORDER BY station", db_type=db_type)
     stations = [row['station'] for row in c.fetchall()]
@@ -161,7 +216,10 @@ def index():
         songs=songs_data,
         stations=stations,
         song_titles=song_titles,
-        total_count=len(songs_data)
+        total_count=len(songs_data),
+        first_timestamp=first_timestamp,
+        last_timestamp=last_timestamp,
+        title="Phil Collins Detector"
     )
 
 @app.route('/station/<station_name>')
@@ -592,7 +650,7 @@ def get_logs():
 @login_required
 def logs_page():
     """Display logs page"""
-    return render_template('logs.html')
+    return render_template('logs.html', title="Logs")
 
 @app.route('/api/uptime')
 def get_uptime():
@@ -667,7 +725,8 @@ def admin_page():
     
     return render_template(
         'maintenance.html',
-        songs=songs_data
+        songs=songs_data,
+        title="Database Maintenance"
     )
 
 @app.route('/api/delete/<int:song_id>', methods=['POST'])
@@ -775,7 +834,7 @@ def settings_page():
     
     conn.close()
     
-    return render_template('settings.html', settings=settings, stations=stations_by_source)
+    return render_template('settings.html', settings=settings, stations=stations_by_source, title="Settings")
 
 @app.route('/api/settings/<key>', methods=['GET'])
 def get_setting_api(key):
