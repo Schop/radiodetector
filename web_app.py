@@ -174,7 +174,7 @@ def index():
     if last_timestamp_raw:
         ts = parse_iso_timestamp(last_timestamp_raw)
         if ts:
-            last_timestamp = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ')
+            last_timestamp = ts.strftime('%d %b %Y om %H:%M').replace(' 0', ' ')
         else:
             last_timestamp = last_timestamp_raw
     
@@ -194,7 +194,7 @@ def index():
         ts = parse_iso_timestamp(song['timestamp'])
         # Format: "10:46, 2 Feb 2026" (use %#d for Windows, %d and strip for others)
         if ts:
-            ts_formatted = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ')
+            ts_formatted = ts.strftime('%d %b %Y om %H:%M').replace(' 0', ' ')
         else:
             ts_formatted = song['timestamp']
         songs_data.append({
@@ -268,7 +268,7 @@ def station_detail(station_name):
         total_songs=total_songs,
         artists=artists,
         song_titles=song_titles,
-        title = f"Station: {station_name}"
+        title = f"Radiostation: {station_name}"
     )
 
 @app.route('/song/<path:song_name>')
@@ -326,7 +326,7 @@ def song_detail(song_name):
         total_detections=total_detections,
         artists=artists,
         stations=stations_list,
-        title=f"Song: {song_name}"
+        title=f"Nummer: {song_name}"
     )
 
 @app.route('/artist/<path:artist_name>')
@@ -389,7 +389,7 @@ def artist_detail(artist_name):
         stations=stations,
         song_titles=song_titles,
         songs_chart=songs_list,
-        title=f"Artist: {artist_name}"
+        title=f"Artiest: {artist_name}"
     )
 
 @app.route('/api/chart-data')
@@ -494,13 +494,13 @@ def now_playing():
                     time_ago = datetime.now() - ts
                     minutes_ago = int(time_ago.total_seconds() / 60)
                     if minutes_ago == 0:
-                        time_ago_str = 'Just now'
+                        time_ago_str = 'Speelt nu'
                     elif minutes_ago == 1:
-                        time_ago_str = '1 min ago'
+                        time_ago_str = '1 min geleden'
                     else:
-                        time_ago_str = f'{minutes_ago} mins ago'
+                        time_ago_str = f'{minutes_ago} min geleden'
                 else:
-                    time_ago_str = 'Recently'
+                    time_ago_str = 'Recentelijk'
                 
                 now_playing_list.append({
                     'station': song_data['station'],
@@ -543,7 +543,7 @@ def station_charts(station_name):
             hours[ts.hour] += 1
             weekdays[ts.weekday()] += 1
     
-    day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    day_names = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
     
     return jsonify({
         'hourly': {
@@ -577,7 +577,7 @@ def song_charts(song_name):
             hours[ts.hour] += 1
             weekdays[ts.weekday()] += 1
     
-    day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    day_names = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
     
     return jsonify({
         'hourly': {
@@ -633,7 +633,7 @@ def artist_charts(artist_name):
             hours[ts.hour] += 1
             weekdays[ts.weekday()] += 1
     
-    day_names = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+    day_names = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo']
     
     return jsonify({
         'songs': {
@@ -775,9 +775,9 @@ def admin_page():
     songs_data = []
     for song in songs:
         ts = parse_iso_timestamp(song['timestamp'])
-        # Format: "10 Feb 2026 at 14:30" (use %#d for Windows, %d and strip for others)
+        # Format: "10 Feb 2026 om 14:30" (use %#d for Windows, %d and strip for others)
         if ts:
-            ts_formatted = ts.strftime('%d %b %Y at %H:%M').replace(' 0', ' ')
+            ts_formatted = ts.strftime('%d %b %Y om %H:%M').replace(' 0', ' ')
         else:
             ts_formatted = song['timestamp']
         songs_data.append({

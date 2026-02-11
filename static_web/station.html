@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="pageTitle">Station Details</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <div class="container-fluid">
+        <main>
+            <nav class="navbar navbar-light bg-light mb-4">
+    <div class="container-fluid">
+        <div class="w-100">
+            <ul class="navbar-nav me-auto flex-row justify-content-start gap-3">
+                <li class="nav-item">
+                    <a class="nav-link" href="/">
+                        <i class="bi bi-house"></i>
+                        <span class="d-none d-lg-inline ms-1">Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item ms-auto">
+                    <span class="navbar-text text-dark">
+                        <small id="uptime">Uptime: ...</small>
+                    </span>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+            
+            <h1 id="stationTitle">Loading...</h1>
+            <h3 class="text-muted mb-4">Station details and play history</h3>
+            
+            <!-- Summary Stats -->
+            <div class="row mb-4">
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">Statistics</h6>
+                            <table class="compact-stats-table w-100">
+                                <tbody>
+                                    <tr>
+                                        <td>Total Detections</td>
+                                        <td id="totalSongs">...</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Unique Songs</td>
+                                        <td id="uniqueSongs">...</td>
+                                    </tr>
+                                    <tr>
+                                        <td>Unique Artists</td>
+                                        <td id="uniqueArtists">...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">Hourly Distribution</h6>
+                            <div style="height: 200px;">
+                                <canvas id="hourlyChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h6 class="card-title">Weekday Distribution</h6>
+                            <div style="height: 200px;">
+                                <canvas id="weekdayChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <h3 class="mt-4">All Detections</h3>
+            <div id="songsContainer">
+                <div class="text-center text-muted py-3">
+                    <div class="spinner-border spinner-border-sm" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <small class="d-block mt-2">Loading songs...</small>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <footer class="footer mt-5 py-3 bg-light">
+    <div class="container text-center text-muted">
+        <small>Tracking since ... - Version 1.0</small>
+    </div>
+</footer>
+
+    <script>
+        const API_BASE = '/cgi-bin/data_api.py';
+        const stationName = decodeURIComponent(window.location.hash.substring(1));
+
+        document.getElementById('pageTitle').textContent = `${stationName} - Station Details`;
+        document.getElementById('stationTitle').textContent = stationName;
+
+        // Load station data
+        fetch(`${API_BASE}/api/station/${encodeURIComponent(stationName)}/data`)
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('totalSongs').textContent = data.total_songs;
+                document.getElementById('uniqueSongs').textContent = data.song_titles.length;
+                document.getElementById('uniqueArtists').textContent = data.artists.length;
+
+                // Render table
+                if (data.songs && data.songs.length > 0) {
+                    const tableHtml = `
+                        <table id="stationSongsTable" class="table table-striped table-hover display">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Artist</th>
+                                    <th>Song</th>
+                                    <th>Detected</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.songs.map(song => `
+                                    <tr>
+                                        <td><a href="/artist.html#${encodeURIComponent(song.artist)}" class="station-link">${song.artist}</a></td>
+                                        <td><a href="/song.html#${encodeURIComponent(song.song)}" class="station-link">${song.song}</a></td>
+                                        <td class="timestamp" data-order="${song.timestamp_raw}">${song.timestamp}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    `;
+                    document.getElementById('songsContainer').innerHTML = tableHtml;
+
+                    $('#stationSongsTable').DataTable({
+                        order: [[2, 'desc']],
+                        pageLength: 25
+                    });
+                } else {
+                    document.getElementById('songsContainer').innerHTML = `
+                        <div class="alert alert-info text-center" role="alert">
+                            <h4 class="alert-heading">No detections found</h4>
+                            <p>No songs detected from this station yet.</p>
+                        </div>
+                    `;
+                }
+            })
+            .catch(err => {
+                console.error('Failed to load station data:', err);
+                document.getElementById('songsContainer').innerHTML = `
+                    <div class="alert alert-danger text-center" role="alert">
+                        <h4 class="alert-heading">Error loading data</h4>
+                        <p>Please check the server configuration.</p>
+                    </div>
+                `;
+            });
+
+        // Load charts
+        fetch(`${API_BASE}/api/station/${encodeURIComponent(stationName)}/charts`)
+            .then(response => response.json())
+            .then(data => {
+                new Chart(document.getElementById('hourlyChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.hours.labels,
+                        datasets: [{
+                            label: 'Detections by Hour',
+                            data: data.hours.data,
+                            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                            borderColor: 'rgba(54, 162, 235, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+
+                new Chart(document.getElementById('weekdayChart'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.weekdays.labels,
+                        datasets: [{
+                            label: 'Detections by Weekday',
+                            data: data.weekdays.data,
+                            backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                            borderColor: 'rgba(75, 192, 192, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            })
+            .catch(err => console.error('Failed to load chart data:', err));
+    </script>
+</body>
+</html>

@@ -18,19 +18,19 @@
                 <div class="col-md-3">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h6 class="card-title">{{ song_name }} Statistics</h6>
+                            <h6 class="card-title">{{ song_name }} Statistieken</h6>
                             <table class="compact-stats-table w-100">
                                 <tbody>
                                     <tr>
-                                        <td>Total Plays</td>
+                                        <td>Totaal gespeeld</td>
                                         <td>{{ total_detections }}</td>
                                     </tr>
                                     <tr>
-                                        <td>Unique Stations</td>
+                                        <td>Unieke Radiostations</td>
                                         <td>{{ stations|length }}</td>
                                     </tr>
                                     <tr>
-                                        <td>Artists</td>
+                                        <td>Artiesten</td>
                                         <td>{{ artists|length }}</td>
                                     </tr>
                                 </tbody>
@@ -41,7 +41,7 @@
                 <div class="col-md-3">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h6 class="card-title">Stations Playing {{ song_name }}</h6>
+                            <h6 class="card-title">Radiostations die {{ song_name }} spelen</h6>
                             <div style="height: 200px;">
                                 <canvas id="stationsChart"></canvas>
                             </div>
@@ -51,7 +51,7 @@
                 <div class="col-md-3">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h6 class="card-title">Hourly Distribution for {{ song_name }}</h6>
+                            <h6 class="card-title">Uurverdeling voor {{ song_name }}</h6>
                             <div style="height: 200px;">
                                 <canvas id="hourlyChart"></canvas>
                             </div>
@@ -61,7 +61,7 @@
                 <div class="col-md-3">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h6 class="card-title">Weekday Distribution for {{ song_name }}</h6>
+                            <h6 class="card-title">Weekdagverdeling voor {{ song_name }}</h6>
                             <div style="height: 200px;">
                                 <canvas id="weekdayChart"></canvas>
                             </div>
@@ -70,13 +70,13 @@
                 </div>
             </div>
             
-            <h3 class="mt-4">All Detections</h3>
+            <h3 class="mt-4">Alle Detecties</h3>
             <table id="songDetectionsTable" class="table table-striped table-hover display">
                 <thead class="table-light">
                     <tr>
-                        <th>Station</th>
-                        <th>Artist</th>
-                        <th>Detected</th>
+                        <th>Radiostation</th>
+                        <th>Artiest</th>
+                        <th>Gedetecteerd</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -149,7 +149,7 @@
                         data: {
                             labels: data.hourly.labels,
                             datasets: [{
-                                label: 'Plays by Hour',
+                                label: 'per uur',
                                 data: data.hourly.data,
                                 backgroundColor: 'rgba(54, 162, 235, 0.6)',
                                 borderColor: 'rgba(54, 162, 235, 1)',
@@ -178,7 +178,7 @@
                         data: {
                             labels: data.weekdays.labels,
                             datasets: [{
-                                label: 'Plays by Weekday',
+                                label: 'per weekdag',
                                 data: data.weekdays.data,
                                 backgroundColor: 'rgba(75, 192, 192, 0.6)',
                                 borderColor: 'rgba(75, 192, 192, 1)',
