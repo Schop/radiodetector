@@ -236,11 +236,11 @@ def station_detail(station_name):
     total_songs = len(songs)
     
     # Get unique artists from this station
-    c.execute("SELECT DISTINCT artist FROM songs WHERE station = ? ORDER BY artist", (station_name,))
+    db.execute_query(c, "SELECT DISTINCT artist FROM songs WHERE station = ? ORDER BY artist", (station_name,), db_type)
     artists = [row['artist'] for row in c.fetchall()]
     
     # Get unique song titles from this station
-    c.execute("SELECT DISTINCT song FROM songs WHERE station = ? ORDER BY song", (station_name,))
+    db.execute_query(c, "SELECT DISTINCT song FROM songs WHERE station = ? ORDER BY song", (station_name,), db_type)
     song_titles = [row['song'] for row in c.fetchall()]
     
     conn.close()
@@ -278,24 +278,24 @@ def song_detail(song_name):
     c = db.get_dict_cursor(conn, db_type)
     
     # Get all detections of this song
-    c.execute("SELECT * FROM songs WHERE song = ? ORDER BY timestamp DESC", (song_name,))
+    db.execute_query(c, "SELECT * FROM songs WHERE song = ? ORDER BY timestamp DESC", (song_name,), db_type)
     songs = c.fetchall()
     
     # Get total count
     total_detections = len(songs)
     
     # Get stations that played this song with counts
-    c.execute("""
+    db.execute_query(c, """
         SELECT station, COUNT(*) as count 
         FROM songs 
         WHERE song = ? 
         GROUP BY station 
         ORDER BY count DESC
-    """, (song_name,))
+    """, (song_name,), db_type)
     stations_data = c.fetchall()
     
     # Get unique artists who performed this song
-    c.execute("SELECT DISTINCT artist FROM songs WHERE song = ? ORDER BY artist", (song_name,))
+    db.execute_query(c, "SELECT DISTINCT artist FROM songs WHERE song = ? ORDER BY artist", (song_name,), db_type)
     artists = [row['artist'] for row in c.fetchall()]
     
     conn.close()
@@ -336,28 +336,28 @@ def artist_detail(artist_name):
     c = db.get_dict_cursor(conn, db_type)
     
     # Get all detections for this artist
-    c.execute("SELECT * FROM songs WHERE artist = ? ORDER BY timestamp DESC", (artist_name,))
+    db.execute_query(c, "SELECT * FROM songs WHERE artist = ? ORDER BY timestamp DESC", (artist_name,), db_type)
     songs = c.fetchall()
     
     # Get total count
     total_detections = len(songs)
     
     # Get unique songs by this artist with counts
-    c.execute("""
+    db.execute_query(c, """
         SELECT song, COUNT(*) as count 
         FROM songs 
         WHERE artist = ? 
         GROUP BY song 
         ORDER BY count DESC
-    """, (artist_name,))
+    """, (artist_name,), db_type)
     songs_data_counts = c.fetchall()
     
     # Get unique stations that played this artist
-    c.execute("SELECT DISTINCT station FROM songs WHERE artist = ? ORDER BY station", (artist_name,))
+    db.execute_query(c, "SELECT DISTINCT station FROM songs WHERE artist = ? ORDER BY station", (artist_name,), db_type)
     stations = [row['station'] for row in c.fetchall()]
     
     # Get unique song titles by this artist
-    c.execute("SELECT DISTINCT song FROM songs WHERE artist = ? ORDER BY song", (artist_name,))
+    db.execute_query(c, "SELECT DISTINCT song FROM songs WHERE artist = ? ORDER BY song", (artist_name,), db_type)
     song_titles = [row['song'] for row in c.fetchall()]
     
     conn.close()
@@ -529,7 +529,7 @@ def station_charts(station_name):
     c = db.get_dict_cursor(conn, db_type)
     
     # Get all timestamps for this station
-    c.execute("SELECT timestamp FROM songs WHERE station = ?", (station_name,))
+    db.execute_query(c, "SELECT timestamp FROM songs WHERE station = ?", (station_name,), db_type)
     songs = c.fetchall()
     conn.close()
     
@@ -563,7 +563,7 @@ def song_charts(song_name):
     c = db.get_dict_cursor(conn, db_type)
     
     # Get all timestamps for this song
-    c.execute("SELECT timestamp FROM songs WHERE song = ?", (song_name,))
+    db.execute_query(c, "SELECT timestamp FROM songs WHERE song = ?", (song_name,), db_type)
     songs = c.fetchall()
     conn.close()
     
@@ -597,28 +597,28 @@ def artist_charts(artist_name):
     c = db.get_dict_cursor(conn, db_type)
     
     # Get all timestamps for this artist
-    c.execute("SELECT timestamp FROM songs WHERE artist = ?", (artist_name,))
+    db.execute_query(c, "SELECT timestamp FROM songs WHERE artist = ?", (artist_name,), db_type)
     songs = c.fetchall()
     
     # Get ALL songs by this artist (for the table)
-    c.execute("""
+    db.execute_query(c, """
         SELECT song, COUNT(*) as count 
         FROM songs 
         WHERE artist = ? 
         GROUP BY song 
         ORDER BY count DESC
-    """, (artist_name,))
+    """, (artist_name,), db_type)
     all_songs = c.fetchall()
     
     # Get top stations playing this artist
-    c.execute("""
+    db.execute_query(c, """
         SELECT station, COUNT(*) as count 
         FROM songs 
         WHERE artist = ? 
         GROUP BY station 
         ORDER BY count DESC 
         LIMIT 10
-    """, (artist_name,))
+    """, (artist_name,), db_type)
     top_stations = c.fetchall()
     
     conn.close()
@@ -802,7 +802,7 @@ def delete_song(song_id):
     try:
         conn, db_type = get_db_connection()
         c = db.get_dict_cursor(conn, db_type)
-        c.execute("DELETE FROM songs WHERE id = ?", (song_id,))
+        db.execute_query(c, "DELETE FROM songs WHERE id = ?", (song_id,), db_type)
         conn.commit()
         conn.close()
         
@@ -835,11 +835,11 @@ def edit_song(song_id):
         
         conn, db_type = get_db_connection()
         c = db.get_dict_cursor(conn, db_type)
-        c.execute("""
+        db.execute_query(c, """
             UPDATE songs 
             SET station = ?, artist = ?, song = ?, timestamp = ?
             WHERE id = ?
-        """, (station, artist, song, timestamp, song_id))
+        """, (station, artist, song, timestamp, song_id), db_type)
         conn.commit()
         conn.close()
         
@@ -866,7 +866,7 @@ def settings_page():
     settings_keys = ['target_artists', 'target_songs', 'priority_myonlineradio']
     
     for key in settings_keys:
-        c.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        db.execute_query(c, "SELECT value FROM settings WHERE key = ?", (key,), db_type)
         row = c.fetchone()
         if row:
             try:
@@ -909,7 +909,7 @@ def get_setting_api(key):
     conn, db_type = get_db_connection()
     c = db.get_dict_cursor(conn, db_type)
     
-    c.execute("SELECT value FROM settings WHERE key = ?", (key,))
+    db.execute_query(c, "SELECT value FROM settings WHERE key = ?", (key,), db_type)
     row = c.fetchone()
     
     conn.close()
@@ -985,12 +985,12 @@ def toggle_station(station_id):
         c = db.get_dict_cursor(conn, db_type)
         
         # Toggle enabled status
-        c.execute("UPDATE stations SET enabled = 1 - enabled, updated_at = ? WHERE id = ?",
-                 (datetime.now().isoformat(), station_id))
+        db.execute_query(c, "UPDATE stations SET enabled = 1 - enabled, updated_at = ? WHERE id = ?",
+                 (datetime.now().isoformat(), station_id), db_type)
         conn.commit()
         
         # Get updated station
-        c.execute("SELECT enabled FROM stations WHERE id = ?", (station_id,))
+        db.execute_query(c, "SELECT enabled FROM stations WHERE id = ?", (station_id,), db_type)
         row = c.fetchone()
         conn.close()
         
@@ -1009,12 +1009,12 @@ def toggle_station_priority(station_id):
         c = db.get_dict_cursor(conn, db_type)
         
         # Toggle priority status
-        c.execute("UPDATE stations SET priority = 1 - priority, updated_at = ? WHERE id = ?",
-                 (datetime.now().isoformat(), station_id))
+        db.execute_query(c, "UPDATE stations SET priority = 1 - priority, updated_at = ? WHERE id = ?",
+                 (datetime.now().isoformat(), station_id), db_type)
         conn.commit()
         
         # Get updated station
-        c.execute("SELECT priority FROM stations WHERE id = ?", (station_id,))
+        db.execute_query(c, "SELECT priority FROM stations WHERE id = ?", (station_id,), db_type)
         row = c.fetchone()
         conn.close()
         
@@ -1045,9 +1045,9 @@ def add_station():
         c = db.get_dict_cursor(conn, db_type)
         
         timestamp = datetime.now().isoformat()
-        c.execute(
+        db.execute_query(c,
             "INSERT INTO stations (name, slug, source, enabled, priority, updated_at) VALUES (?, ?, ?, 1, 0, ?)",
-            (name, slug, source, timestamp)
+            (name, slug, source, timestamp), db_type
         )
         conn.commit()
         station_id = c.lastrowid
@@ -1058,9 +1058,10 @@ def add_station():
             'message': f'Station {name} added successfully',
             'id': station_id
         })
-    except sqlite3.IntegrityError:
-        return jsonify({'success': False, 'error': 'Station already exists'}), 400
     except Exception as e:
+        error_str = str(e).lower()
+        if 'duplicate' in error_str or 'unique' in error_str or 'integrity' in error_str:
+            return jsonify({'success': False, 'error': 'Station already exists'}), 400
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/stations/<int:station_id>', methods=['DELETE'])
@@ -1070,7 +1071,7 @@ def delete_station(station_id):
     try:
         conn, db_type = get_db_connection()
         c = db.get_dict_cursor(conn, db_type)
-        c.execute("DELETE FROM stations WHERE id = ?", (station_id,))
+        db.execute_query(c, "DELETE FROM stations WHERE id = ?", (station_id,), db_type)
         conn.commit()
         conn.close()
         
