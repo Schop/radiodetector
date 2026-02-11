@@ -5,46 +5,63 @@
             {% include 'includes/nav.html' %}
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; gap: 30px;">
             <div style="display: flex; gap: 20px; align-items: center;">
-                <img src="/static/images/phil.png" alt="Phil Collins" style="max-height: 8em; height: auto; width: auto; border-radius: 8px; object-fit: cover; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
+                <img src="/static/images/phil.jpg" alt="Phil Collins" class="d-none d-md-block" style="max-height: 8em; height: auto; width: auto; border-radius: 8px; object-fit: cover; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">
                 <div>
                     <h1>Phil Collins Checker</h1>
-                    <h3 class="">Tracking songs and artists across 19 Dutch radio stations</h3>
+                    <h3 class="">Checking for Phil across 19 Dutch radio stations</h3>
                 </div>
             </div>
-            <div style="display: flex; gap: 20px; align-items: flex-start; flex-shrink: 0;">
-                <div class="tracking-list">
-                    <div class="tracking-label">Tracking Artists</div>
-                    {% if target_artists %}
-                        {% for artist in target_artists %}
-                        <span class="tracking-badge">{{ artist }}</span>
-                        {% endfor %}
-                    {% else %}
-                        <span class="tracking-badge-empty">None</span>
-                    {% endif %}
-                </div>
-                <div class="tracking-list">
-                    <div class="tracking-label">Tracking Songs</div>
-                    {% if target_songs %}
-                        {% for song in target_songs %}
-                        <span class="tracking-badge">{{ song }}</span>
-                        {% endfor %}
-                    {% else %}
-                        <span class="tracking-badge-empty">None</span>
-                    {% endif %}
-                </div>
-                <div class="stats-compact">
-                    <div class="stat-card-small">
-                        <div class="stat-value-small">{{ total_count }}</div>
-                        <div class="stat-label-small">Total Detections</div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-2">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-graph-up"></i> Statistics</h6>
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">Total Detections: {{ total_count }}</li>
+                            <li class="list-group-item">Unique Stations: {{ stations|length }}</li>
+                            <li class="list-group-item">Unique Songs: {{ song_titles|length }}</li>
+                        </ul>
                     </div>
-                    <div class="stat-card-small">
-                        <div class="stat-value-small">{{ stations|length }}</div>
-                        <div class="stat-label-small">Unique Stations</div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-2">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-person-bounding-box"></i> Tracking Artists</h6>
+                        {% if target_artists %}
+                        <ul class="list-group list-group-flush">
+                            {% for artist in target_artists %}
+                            <li class="list-group-item"><a href="/artist/{{ artist }}" class="station-link">{{ artist }}</a></li>
+                            {% endfor %}
+                    </ul>
+                    {% else %}
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">None</li>
+                        </ul>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-2">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h6 class="card-title"><i class="bi bi-mic"></i> Tracking Songs</h6>
+                    {% if target_songs %}
+                        <ul class="list-group list-group-flush">
+                            {% for song in target_songs %}
+                            <li class="list-group-item"><a href="/song/{{ song }}" class="station-link">{{ song }}</a></li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <ul class="list-group list-group-flush">
+                            <li class="list-group-item">None</li>
+                        </ul>
+                    {% endif %}
                     </div>
                 </div>
             </div>
         </div>
-        
         <!-- Charts -->
         <div class="accordion mb-4" id="statsAccordion">
             <div class="accordion-item">
@@ -57,21 +74,21 @@
                     <div class="accordion-body">
                         <div class="row g-3 mb-3">
                             <div class="col-md-6">
-                                <h5>Top Stations</h5>
+                                <h6>Top Stations</h6>
                                 <canvas id="stationsChart" style="max-height: 250px;"></canvas>
                             </div>
                             <div class="col-md-6">
-                                <h5>Detections by Hour</h5>
+                                <h6>Detections by Hour</h6>
                                 <canvas id="hoursChart" style="max-height: 250px;"></canvas>
                             </div>
                         </div>
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <h5>Detections by Day of Week</h5>
+                                <h6>Detections by Day of Week</h6>
                                 <canvas id="weekdaysChart" style="max-height: 250px;"></canvas>
                             </div>
                             <div class="col-md-6">
-                                <h5>Last 14 Days Timeline</h5>
+                                <h6>Last 14 Days Timeline</h6>
                                 <canvas id="timelineChart" style="max-height: 250px;"></canvas>
                             </div>
                         </div>

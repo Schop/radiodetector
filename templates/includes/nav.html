@@ -1,26 +1,37 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+<nav class="navbar navbar-light bg-light mb-4">
     <div class="container-fluid">
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        <div class="collapse navbar-collapse" id="navbarNav">
-            <ul class="navbar-nav me-auto">
+        <div class="w-100">
+            <ul class="navbar-nav me-auto flex-row justify-content-start gap-3">
                 <li class="nav-item">
-                    <a class="nav-link{% if request.path == '/' %} active{% endif %}" href="/">Dashboard</a>
+                    <a class="nav-link{% if request.path == '/' %} active{% endif %}" href="/">
+                        <i class="bi bi-house"></i>
+                        <span class="d-none d-lg-inline ms-1">Dashboard</span>
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link{% if request.path == '/logs' %} active{% endif %}" href="/logs">Logs</a>
+                    <a class="nav-link{% if request.path == '/logs' %} active{% endif %}" href="/logs">
+                        <i class="bi bi-file-text"></i>
+                        <span class="d-none d-lg-inline ms-1">Logs</span>
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link{% if request.path == '/admin' %} active{% endif %}" href="/admin">Maintenance</a>
+                    <a class="nav-link{% if request.path == '/admin' %} active{% endif %}" href="/admin">
+                        <i class="bi bi-tools"></i>
+                        <span class="d-none d-lg-inline ms-1">Maintenance</span>
+                    </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link{% if request.path == '/settings' %} active{% endif %}" href="/settings">Settings</a>
+                    <a class="nav-link{% if request.path == '/settings' %} active{% endif %}" href="/settings">
+                        <i class="bi bi-gear"></i>
+                        <span class="d-none d-lg-inline ms-1">Settings</span>
+                    </a>
+                </li>
+                <li class="nav-item ms-auto">
+                    <span class="navbar-text text-dark">
+                        <small id="uptime">Uptime: ...</small>
+                    </span>
                 </li>
             </ul>
-            <span class="navbar-text text-light">
-                <small id="uptime">Uptime: ...</small>
-            </span>
         </div>
     </div>
 </nav>

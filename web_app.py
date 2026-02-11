@@ -119,6 +119,10 @@ def index():
     db.execute_query(c, "SELECT DISTINCT station FROM songs ORDER BY station", db_type=db_type)
     stations = [row['station'] for row in c.fetchall()]
     
+    # Get unique song titles
+    db.execute_query(c, "SELECT DISTINCT song FROM songs ORDER BY song", db_type=db_type)
+    song_titles = [row['song'] for row in c.fetchall()]
+    
     conn.close()
     
     # Convert timestamps to readable format
@@ -148,6 +152,7 @@ def index():
         target_songs=target_songs,
         songs=songs_data,
         stations=stations,
+        song_titles=song_titles,
         total_count=len(songs_data)
     )
 
