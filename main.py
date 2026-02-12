@@ -644,7 +644,7 @@ def main():
                             conn.commit()
                             # Print with red warning and timestamp
                             log_print(f"[{ts}] [{station}] [{source}] {normalized_song_info}", Fore.RED, Style.BRIGHT)
-                            
+
                             # Upload database to web server after new detection
                             try:
                                 import subprocess
@@ -667,7 +667,8 @@ def main():
             
             # Print status message
             if songs_changed == 0:
-                log_print("No song changes detected", Fore.CYAN)
+                ts = get_timestamp()
+                log_print(f"[{ts}] No song changes detected", Fore.CYAN)
             
             # Wait 60 seconds before next check
             log_print("Waiting 60 seconds to update the list again...", Fore.CYAN)

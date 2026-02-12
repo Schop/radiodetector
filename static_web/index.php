@@ -348,7 +348,7 @@
                     });
                     document.getElementById('firstTimestamp').textContent = formattedFirstDate;
                     
-                    document.getElementById('todayCount').textContent = data.today_count || '0';
+                    document.getElementById('todayCountnav').textContent = data.today_count || '0';
 
                     // Update footer
                     document.getElementById('footerText').textContent = `Tracking since ${formattedFirstDate} - Version 1.0 - Data auto-refreshes every 30 seconds`;
