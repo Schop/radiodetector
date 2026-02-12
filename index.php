@@ -1,4 +1,4 @@
-<?php $page_title = 'Phil Collins Detector'; ?>
+﻿<?php $page_title = 'Phil Collins Detector'; ?>
 <?php include 'includes/head.html'; ?>
 
 <body>
@@ -96,8 +96,8 @@
     </div>
 
     <script>
-        //console.log('Script starting...');
-        const API_BASE = '/api.php'; // Adjust this path as needed
+        console.log('Script starting...');
+        const API_BASE = '/static_web/api.php'; // Adjust this path as needed
 
         // Load index data
         // console.log('Starting to load index data...');
@@ -399,58 +399,25 @@
         // Poll for song count every 10 seconds and refresh dashboard if changed
         let lastSongCount = null;
         function pollSongCount() {
-            //console.log('Polling song count...');
-
-            // cache-bust to avoid intermediate caching
-            const url = `${API_BASE}?song_count=1&_=${Date.now()}`;
-
-            fetch(url)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status} ${response.statusText}`);
-                    }
-                    return response.json();
-                })
+            console.log('Polling song count...');
+            fetch(`${API_BASE}?song_count=1`)
+                .then(response => response.json())
                 .then(data => {
-                    //console.log('Data received:', data);
-
-                    // If the API returned an error object, surface it and stop
-                    if (data && data.error) {
-                        console.error('Song-count API error:', data.error, data.tables || '');
-                        // show short notice in footer (non-persistent)
-                        const footer = document.getElementById('footerText');
-                        if (footer) {
-                            const prev = footer.dataset.prev || footer.textContent;
-                            footer.dataset.prev = prev;
-                            footer.textContent = `ERROR: ${data.error}`;
-                            footer.classList.add('text-danger');
-                            setTimeout(() => {
-                                footer.textContent = footer.dataset.prev;
-                                footer.classList.remove('text-danger');
-                            }, 8000);
-                        }
-                        return;
-                    }
-
-                    if (typeof data.count === 'number') {
+                    if (typeof data.count !== 'undefined') {
                         if (lastSongCount === null) {
                             lastSongCount = data.count;
-                            //console.log(`Initial song count set to ${lastSongCount}`);
                         } else if (data.count !== lastSongCount) {
                             lastSongCount = data.count;
                             refreshDashboardData();
                             updateNowPlaying();
                             console.log(`Song count changed to ${data.count}, dashboard refreshed`);
                         } else {
-                            //console.log(`Song count unchanged at ${data.count}`);
-                        }
-                    } else {
-                        console.warn('pollSongCount: unexpected response format', data);
+                            console.log(`Song count unchanged at ${data.count}`);
+                        }   
                     }
                 })
-                .catch(err => {
-                    console.error('Failed to poll song count:', err);
-                });
+                .catch(err => console.error('Failed to poll song count:', err));
+            console.log('Polling complete');
         }
         pollSongCount();
         setInterval(pollSongCount, 10000);

@@ -7,6 +7,83 @@
 header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
+// absolute path to the SQLite DB (ensure PHP uses the same file you inspect locally)
+$db_path = __DIR__ . '/radio_songs.db';
+
+function get_song_count() {
+    global $db_path;
+
+    if (empty($db_path)) {
+        return ['error' => 'db_path not set'];
+    }
+
+    $exists = file_exists($db_path);
+    $info = ['db_path' => $db_path, 'exists' => $exists];
+    if ($exists) {
+        $info['realpath'] = realpath($db_path) ?: null;
+        $info['size'] = filesize($db_path);
+        $info['mtime'] = date('c', filemtime($db_path));
+    }
+
+    try {
+        $pdo = get_db_connection();
+
+        // confirm songs table exists
+        $check = $pdo->query("SELECT name FROM sqlite_master WHERE type='table' AND name='songs'");
+        $hasSongs = (bool)$check->fetchColumn();
+        if (!$hasSongs) {
+            // include available tables for debugging
+            $stmt = $pdo->query("SELECT name FROM sqlite_master WHERE type='table'");
+            $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            return array_merge(['error' => 'no such table: songs', 'tables' => $tables], $info);
+        }
+
+        $stmt = $pdo->query('SELECT COUNT(*) as count FROM songs');
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        return (int)($row['count'] ?? 0);
+    } catch (Exception $e) {
+        // try to list tables if possible
+        try {
+            $pdo = get_db_connection();
+            $stmt = $pdo->query('SELECT name FROM sqlite_master WHERE type="table"');
+            $tables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+            return array_merge(['error' => $e->getMessage(), 'tables' => $tables], $info);
+        } catch (Exception $e2) {
+            return array_merge(['error' => $e->getMessage(), 'connection_error' => $e2->getMessage()], $info);
+        }
+    }
+}
+
+// Lightweight endpoint for song count polling
+if (isset($_GET['song_count']) && $_GET['song_count'] == '1') {
+    $result = get_song_count();
+    if (is_array($result)) {
+        echo json_encode($result);
+    } else {
+        echo json_encode(['count' => $result]);
+    }
+    exit;
+}
+
+// DB health/info endpoint (for debugging)
+if (isset($_GET['db_info']) && $_GET['db_info'] == '1') {
+    $dbInfo = ['db_path' => $db_path, 'exists' => file_exists($db_path)];
+    if ($dbInfo['exists']) {
+        $dbInfo['realpath'] = realpath($db_path);
+        $dbInfo['size'] = filesize($db_path);
+        $dbInfo['mtime'] = date('c', filemtime($db_path));
+        try {
+            $pdo = get_db_connection();
+            $stmt = $pdo->query("SELECT name FROM sqlite_master WHERE type='table'");
+            $dbInfo['tables'] = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        } catch (Exception $e) {
+            $dbInfo['db_error'] = $e->getMessage();
+        }
+    }
+    echo json_encode($dbInfo);
+    exit;
+}
+
 // Database path - adjust as needed
 $db_path = 'radio_songs.db';
 
@@ -479,8 +556,14 @@ function song_data($song_name) {
     $stmt->execute([$song_name]);
     $songs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
+    
     $total_detections = count($songs);
     
+    $today = (new DateTime())->format('Y-m-d');
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM songs WHERE DATE(timestamp) = ?");
+    $stmt->execute([$today]);
+    $today_count = $stmt->fetchColumn();
+
     // Unique stations
     $stmt = $pdo->prepare("SELECT DISTINCT station FROM songs WHERE song = ? ORDER BY station");
     $stmt->execute([$song_name]);
@@ -510,7 +593,8 @@ function song_data($song_name) {
         'total_detections' => $total_detections,
         'stations' => $stations,
         'artists' => $artists,
-        'songs' => $songs_data
+        'songs' => $songs_data,
+        'today_count' => $today_count
     ];
 }
 

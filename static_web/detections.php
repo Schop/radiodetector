@@ -80,7 +80,7 @@
                         </div>
                     `;
                     document.getElementById('detectionsContainer').innerHTML = tableHtml;
-
+                    document.getElementById('todayCountnav').textContent = data.today_count || '0';
                     // Initialize DataTable
                     $('#detectionsTable').DataTable({
                         order: [[0, 'desc']],
@@ -124,6 +124,9 @@
         if (navLink) {
             navLink.classList.add('active');
         }
+
+        
+
     </script>
 </body>
 </html>
