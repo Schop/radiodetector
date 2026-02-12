@@ -643,6 +643,18 @@ def main():
                                       (station, normalized_song, normalized_artist, timestamp), db_type)
                             conn.commit()
                             
+                            # Upload database to web server after new detection
+                            try:
+                                import subprocess
+                                result = subprocess.run(['python3', 'upload_db.py'], 
+                                                      capture_output=True, text=True, timeout=30)
+                                if result.returncode == 0:
+                                    log_print(f"✓ Database uploaded to web server", Fore.GREEN)
+                                else:
+                                    log_print(f"⚠️ Database upload failed: {result.stderr.strip()}", Fore.YELLOW)
+                            except Exception as e:
+                                log_print(f"⚠️ Database upload error: {e}", Fore.YELLOW)
+                            
                             # Beep to alert user (works on Windows and Linux)
                             print('\a', end='', flush=True)
                             

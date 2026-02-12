@@ -115,7 +115,7 @@ The dashboard shows:
 - 🎵 Full song history with filters
 - 🔍 Filter by station or date range
 - 📥 Export to CSV
-- ✨ Auto-refresh every 60 seconds
+- ✨ **Real-time updates**: Data refreshes every 30 seconds, page reloads every 10 minutes
 
 ## Database
 
@@ -128,6 +128,18 @@ The SQLite database `radio_songs.db` stores detected target songs in a `songs` t
 | song      | TEXT    | Song title                               |
 | artist    | TEXT    | Artist name                              |
 | timestamp | TEXT    | ISO format timestamp of detection        |
+
+### Automatic Upload to Web Server
+
+When a target song is detected, both the database and web application files are automatically uploaded to the web server via SFTP. This ensures the web dashboard stays synchronized with the latest detections and any code changes.
+
+**Features:**
+- ✅ Only uploads database when it has actually changed (hash-based)
+- 🔄 Web files uploaded with every database upload (ensures latest code)
+- 📊 Web dashboard updates immediately after new detections
+- 📝 Upload logs saved to `upload.log`
+
+**Configuration:** Copy `upload_db.py.example` to `upload_db.py` and add your SFTP credentials.
 
 ## Project Structure
 

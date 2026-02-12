@@ -75,6 +75,10 @@ The web interface includes:
 - **Dashboard** - View all detected songs
 - **Logs** - Real-time monitoring of the radio checker (auto-refreshes every 5 seconds)
 
+**Database Sync:** The database is automatically uploaded to the web server whenever new songs are detected, so the dashboard stays current without manual intervention.
+
+**Real-time Updates:** The web dashboard refreshes key data every 30 seconds and performs a full page reload every 10 minutes to ensure users see the latest detections immediately.
+
 ### Managing the Services
 
 ```bash
