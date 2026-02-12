@@ -14,7 +14,6 @@
                 </div>
             </div>
             <div class="col-md-3">
-                <h5>Phil detecties vandaag: <strong id="todayCount">...</strong></h5>
                 <p>Sinds <span id="firstTimestamp">...</span> is Phil Collins <strong id="totalCount">...</strong> keer gedetecteerd,
                         op <strong id="uniqueStations">...</strong> verschillende radiozenders,
                         met <strong id="uniqueSongs">...</strong> verschillende nummers.
@@ -122,7 +121,7 @@
                 });
                 document.getElementById('firstTimestamp').textContent = formattedFirstDate;
                 
-                document.getElementById('todayCount').textContent = data.today_count || '0';
+                document.getElementById('todayCountnav').textContent = data.today_count || '0';
 
                 // Update footer
                 document.getElementById('footerText').textContent = `Tracking since ${data.first_timestamp || '...'} - Version 1.0 - Data auto-refreshes every 30 seconds`;

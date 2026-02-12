@@ -642,6 +642,8 @@ def main():
                             db.execute_query(c, "INSERT INTO songs (station, song, artist, timestamp) VALUES (?, ?, ?, ?)",
                                       (station, normalized_song, normalized_artist, timestamp), db_type)
                             conn.commit()
+                            # Print with red warning and timestamp
+                            log_print(f"[{ts}] [{station}] [{source}] {normalized_song_info}", Fore.RED, Style.BRIGHT)
                             
                             # Upload database to web server after new detection
                             try:
@@ -658,8 +660,7 @@ def main():
                             # Beep to alert user (works on Windows and Linux)
                             print('\a', end='', flush=True)
                             
-                            # Print with red warning and timestamp
-                            log_print(f"[{ts}] [{station}] [{source}] {normalized_song_info}", Fore.RED, Style.BRIGHT)
+                            
                         else:
                             # Print normally for non-matching songs
                             log_print(f"[{ts}] [{station}] [{source}] {normalized_song_info}")
