@@ -396,8 +396,26 @@
         updateNowPlaying();
         setInterval(updateNowPlaying, 60000);
 
-        // Auto-refresh key data every 30 seconds
-        setInterval(refreshDashboardData, 30000);
+        // Poll for song count every 10 seconds and refresh dashboard if changed
+        let lastSongCount = null;
+        function pollSongCount() {
+            fetch(`${API_BASE}?song_count=1`)
+                .then(response => response.json())
+                .then(data => {
+                    if (typeof data.count !== 'undefined') {
+                        if (lastSongCount === null) {
+                            lastSongCount = data.count;
+                        } else if (data.count !== lastSongCount) {
+                            lastSongCount = data.count;
+                            refreshDashboardData();
+                            updateNowPlaying();
+                        }
+                    }
+                })
+                .catch(err => console.error('Failed to poll song count:', err));
+        }
+        pollSongCount();
+        setInterval(pollSongCount, 10000);
 
         // Auto-refresh page every 10 minutes (fallback)
         setTimeout(() => location.reload(), 600000);
