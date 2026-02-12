@@ -100,14 +100,14 @@
         const API_BASE = '/api.php'; // Adjust this path as needed
 
         // Load index data
-        console.log('Starting to load index data...');
+        // console.log('Starting to load index data...');
         fetch(`${API_BASE}/api/index-data`)
             .then(response => {
-                console.log('Fetch response received:', response);
+                // console.log('Fetch response received:', response);
                 return response.json();
             })
             .then(data => {
-                console.log('Data received:', data);
+                // console.log('Data received:', data);
                 // Update stats
                 document.getElementById('totalCount').textContent = data.total_count;
                 document.getElementById('uniqueStations').textContent = data.stations.length;
@@ -273,14 +273,14 @@
             });
 
         // Load and render charts
-        console.log('Loading chart data...');
+        // console.log('Loading chart data...');
         fetch(`${API_BASE}/api/chart-data`)
             .then(response => {
-                console.log('Chart response received:', response);
+                // console.log('Chart response received:', response);
                 return response.json();
             })
             .then(data => {
-                console.log('Chart data received:', data);
+                // console.log('Chart data received:', data);
                 // Charts are now initialized with index data
             })
             .catch(err => console.error('Failed to load chart data:', err));
@@ -313,7 +313,7 @@
                         container.innerHTML = `
                             <div class="text-center text-muted py-3">
                                 <i class="bi bi-music-note-beamed" style="font-size: 2rem;"></i>
-                                <p class="mb-0 mt-2">Heerlijk, Phil is nu niet op de radio</p>
+                                <p class="mb-0 mt-2">Heerlijk, Phil is nu even niet op de radio</p>
                             </div>
                         `;
                     }
@@ -330,7 +330,7 @@
 
         // Refresh dashboard data (stats and recent detections)
         function refreshDashboardData() {
-            console.log('Refreshing dashboard data...');
+            // console.log('Refreshing dashboard data...');
             
             fetch(`${API_BASE}/api/index-data`)
                 .then(response => response.json())
@@ -354,15 +354,6 @@
                     // Update footer
                     document.getElementById('footerText').textContent = `Tracking since ${formattedFirstDate} - Version 1.0 - Data auto-refreshes every 30 seconds`;
 
-                    // Update target artists
-                    const artistsList = document.getElementById('targetArtists');
-                    if (data.target_artists && data.target_artists.length > 0) {
-                        artistsList.innerHTML = data.target_artists.map(artist => 
-                            `<li class="list-group-item">${artist}</li>`
-                        ).join('');
-                    } else {
-                        artistsList.innerHTML = '<li class="list-group-item">None</li>';
-                    }
 
                     // Update recent detections table
                     if (data.songs && data.songs.length > 0) {
@@ -412,7 +403,10 @@
         setTimeout(() => location.reload(), 600000);
 
         // Set active nav link
-        document.querySelector('a[href="/"]').classList.add('active');
+        const navLink = document.querySelector('a[href="/"]');
+        if (navLink) {
+            navLink.classList.add('active');
+        }
     </script>
 </body>
 </html>

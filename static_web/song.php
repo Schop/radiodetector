@@ -301,7 +301,10 @@
         }
 
         // Set active nav link
-        document.querySelector('a[href="/"]').classList.add('active');
+        const navLink = document.querySelector('a[href="/"]');
+        if (navLink) {
+            navLink.classList.add('active');
+        }
     </script>
 </body>
 </html>

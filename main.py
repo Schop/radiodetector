@@ -670,6 +670,7 @@ def main():
             
             # Wait 60 seconds before next check
             log_print("Waiting 60 seconds to update the list again...", Fore.CYAN)
+            log_print("=" * 60, Fore.CYAN)
             time.sleep(60)
     
     except KeyboardInterrupt:

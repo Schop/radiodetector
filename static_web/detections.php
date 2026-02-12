@@ -27,14 +27,14 @@
         const API_BASE = '/api.php'; // Adjust this path as needed
 
         // Load index data
-        console.log('Loading detections data...');
+        // console.log('Loading detections data...');
         fetch(`${API_BASE}/api/index-data`)
             .then(response => {
-                console.log('Fetch response received:', response);
+                // console.log('Fetch response received:', response);
                 return response.json();
             })
             .then(data => {
-                console.log('Data received:', data);
+                // console.log('Data received:', data);
 
                 if (data.songs && data.songs.length > 0) {
                     // Render detections table
@@ -120,7 +120,10 @@
             });
 
         // Set active nav link
-        document.querySelector('a[href="/"]').classList.remove('active');
+        const navLink = document.querySelector('a[href="/"]');
+        if (navLink) {
+            navLink.classList.add('active');
+        }
     </script>
 </body>
 </html>

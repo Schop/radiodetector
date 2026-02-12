@@ -99,7 +99,7 @@
     <script>
         const API_BASE = '/api.php';
         const stationName = decodeURIComponent(window.location.hash.substring(1));
-        console.log('Station name from URL:', stationName, 'Hash:', window.location.hash);
+        // console.log('Station name from URL:', stationName, 'Hash:', window.location.hash);
 
         document.getElementById('stationTitle').textContent = stationName;
         document.title = document.title.replace('{stationName}', stationName);
@@ -107,14 +107,14 @@
             document.getElementById('stationSubTitle').innerHTML.replace('{stationName}', stationName);
 
         // Load station data
-        console.log('Loading station data for:', stationName);
+        // console.log('Loading station data for:', stationName);
         fetch(`${API_BASE}/api/station/${encodeURIComponent(stationName)}/data`)
             .then(response => {
-                console.log('Station data response:', response);
+                // console.log('Station data response:', response);
                 return response.json();
             })
             .then(data => {
-                console.log('Station data received:', data);
+                // console.log('Station data received:', data);
                 document.getElementById('totalSongs').textContent = data.total_songs;
                 document.getElementById('uniqueSongs').textContent = data.song_titles.length;
 
@@ -138,7 +138,7 @@
                                     return `
                                     <tr>
                                         <td class="p-1">
-                                            <small class="text-muted">${compactTime}</small>
+                                            <small class="text-muted" style="white-space: nowrap;">${compactTime}</small>
                                         </td>
                                         <td class="p-1">
                                             <small>
@@ -244,7 +244,7 @@
                                 const index = elements[0].index;
                                 const song = top5Labels[index];
                                 window.location.href = `/song.php#${encodeURIComponent(song)}`;
-                                console.log('Clicked on song:', song);
+                                // console.log('Clicked on song:', song);
                             }
                         }
                     }

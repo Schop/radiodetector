@@ -47,3 +47,4 @@ env/
 *.swo
 *~
 .DS_Store
+/static_web/db_check.php
