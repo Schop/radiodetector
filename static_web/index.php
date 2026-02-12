@@ -409,6 +409,7 @@
                             lastSongCount = data.count;
                             refreshDashboardData();
                             updateNowPlaying();
+                            console.log(`Song count changed to ${data.count}, dashboard refreshed`);
                         }
                     }
                 })
