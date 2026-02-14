@@ -1,0 +1,60 @@
+{% include 'includes/head.html' %}
+<body>
+    <div class="container-fluid">
+        <main>
+            {% include 'includes/nav.html' %}
+
+            <h1>About</h1>
+            <p class="lead">Phil Collins Detector — a small utility that monitors Dutch radio stations and records detections of Phil Collins (and other target artists/songs).</p>
+
+            <div class="row">
+                <div class="col-md-8">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">What this project does</h5>
+                            <p class="card-text">The application periodically checks a set of radio station sources, normalizes the track metadata and stores detections in a local database. The web UI shows recent detections, charts and station statistics.</p>
+                            <p class="mb-0"><strong>Tech:</strong> Python, Flask, SQLite (optionally MySQL), Bootstrap, simple JS for charts.</p>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">How to run</h5>
+                            <ul>
+                                <li>Start the background checker: <code>python main.py</code></li>
+                                <li>Open the web UI (default port 5000) or use the static pages in <code>/static_web</code></li>
+                                <li>See <a href="/static/README.md">README</a> and <code>SETUP_PI.md</code> for deployment details.</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">Credits & License</h5>
+                            <p class="mb-0">See the project <a href="/README.md">README</a> for authorship, license and contribution guidelines.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h6>Contact</h6>
+                            <p class="small mb-0">Open an issue on the repository or edit the content in <code>templates/about.html</code> to customize this page.</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-body">
+                            <h6>Version</h6>
+                            <p class="small mb-0">See <code>CHANGES_SUMMARY.md</code> for release notes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {% include 'includes/footer.html' %}
+        </main>
+    </div>
+</body>
+</html>

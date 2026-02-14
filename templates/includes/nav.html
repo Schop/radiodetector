@@ -8,6 +8,12 @@
                         <span class="d-none d-lg-inline ms-1">Dashboard</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link{% if request.path == '/about' %} active{% endif %}" href="/about">
+                        <i class="bi bi-info-circle"></i>
+                        <span class="d-none d-lg-inline ms-1">About</span>
+                    </a>
+                </li>
                 {% if not auth_enabled or logged_in %}
                 <li class="nav-item">
                     <a class="nav-link{% if request.path == '/logs' %} active{% endif %}" href="/logs">

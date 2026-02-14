@@ -374,11 +374,11 @@ function station_charts($station_name) {
 function index_data() {
     $pdo = get_db_connection();
     
-    // Get all songs (limit 1000)
+    // Get all songs (limit 1000) for listing
     $stmt = $pdo->query("SELECT * FROM songs ORDER BY timestamp DESC LIMIT 1000");
     $songs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Get first and last timestamps
+    // Get first and last timestamps (full-table)
     $stmt = $pdo->query("SELECT MIN(timestamp), MAX(timestamp) FROM songs");
     $ts_row = $stmt->fetch(PDO::FETCH_NUM);
     $first_ts = $ts_row[0];
@@ -394,6 +394,77 @@ function index_data() {
         $ts = parse_iso_timestamp($last_ts);
         $last_timestamp = $ts ? $ts->format('d M Y at H:i') : $last_ts;
     }
+    
+    // --- Calculate largest gap between consecutive song detections ---
+    // We fetch all timestamps ordered ASC and compute the biggest interval between adjacent rows.
+    $largest_gap_seconds = 0;
+    $gap_start_ts = null;
+    $gap_end_ts = null;
+
+    try {
+        $stmt = $pdo->query("SELECT timestamp FROM songs ORDER BY timestamp ASC");
+        $all_timestamps = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $prev_epoch = null;
+        $prev_iso = null;
+        foreach ($all_timestamps as $iso) {
+            $dt = parse_iso_timestamp($iso);
+            if (!$dt) continue;
+            $epoch = $dt->getTimestamp();
+            if ($prev_epoch !== null) {
+                $diff = $epoch - $prev_epoch;
+                if ($diff > $largest_gap_seconds) {
+                    $largest_gap_seconds = $diff;
+                    $gap_start_ts = $prev_iso; // earlier
+                    $gap_end_ts = $iso;        // later
+                }
+            }
+            $prev_epoch = $epoch;
+            $prev_iso = $iso;
+        }
+    } catch (Exception $e) {
+        // leave defaults if query fails
+    }
+
+    // Helper to format interval in a human-friendly way
+    $format_interval = function(int $s) {
+        if ($s <= 0) return '0s';
+        $days = intdiv($s, 86400);
+        $hours = intdiv($s % 86400, 3600);
+        $mins = intdiv($s % 3600, 60);
+        $secs = $s % 60;
+        if ($days > 0) return sprintf('%dd %dh %dm', $days, $hours, $mins);
+        if ($hours > 0) return sprintf('%dh %dm', $hours, $mins);
+        if ($mins > 0) return sprintf('%dm %ds', $mins, $secs);
+        return sprintf('%ds', $secs);
+    };
+
+    $largest_gap = null;
+    if ($largest_gap_seconds > 0 && $gap_end_ts) {
+        $gap_day = null;
+        $end_dt = parse_iso_timestamp($gap_end_ts);
+        if ($end_dt) {
+            // attach the gap to the later song's date (user preference)
+            $gap_day = $end_dt->format('Y-m-d');
+        }
+
+        $largest_gap = [
+            'seconds' => $largest_gap_seconds,
+            'readable' => $format_interval($largest_gap_seconds),
+            'start_timestamp' => $gap_start_ts,
+            'end_timestamp' => $gap_end_ts,
+            'date' => $gap_day
+        ];
+    } else {
+        $largest_gap = [
+            'seconds' => 0,
+            'readable' => '0s',
+            'start_timestamp' => null,
+            'end_timestamp' => null,
+            'date' => null
+        ];
+    }
+    // ---------------------------------------------------------------
     
     // Get unique stations
     $stmt = $pdo->query("SELECT DISTINCT station FROM songs ORDER BY station");
@@ -434,7 +505,8 @@ function index_data() {
         'total_count' => count($songs_data),
         'today_count' => $today_count,
         'first_timestamp' => $first_timestamp,
-        'last_timestamp' => $last_timestamp
+        'last_timestamp' => $last_timestamp,
+        'largest_gap' => $largest_gap
     ];
 }
 

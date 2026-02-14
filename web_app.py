@@ -236,6 +236,11 @@ def index():
         title="Phil Collins Detector"
     )
 
+@app.route('/about')
+def about():
+    """About page with project info"""
+    return render_template('about.html', title='About')
+
 @app.route('/station/<station_name>')
 def station_detail(station_name):
     """Station detail page - show all songs detected from this station"""

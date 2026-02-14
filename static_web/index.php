@@ -18,6 +18,7 @@
                         op <strong id="uniqueStations">...</strong> verschillende radiozenders,
                         met <strong id="uniqueSongs">...</strong> verschillende nummers.
                 </p>
+                <p class="mb-0"><small>Langste onderbreking tussen detecties: <strong id="largestGap">...</strong></small></p>
             </div>
         </div>
         <div class="row mb-4">
@@ -123,6 +124,15 @@
                 document.getElementById('firstTimestamp').textContent = formattedFirstDate;
                 
                 document.getElementById('todayCountnav').textContent = data.today_count || '0';
+
+                // Populate largest-gap info (if available)
+                if (data.largest_gap && data.largest_gap.seconds && data.largest_gap.seconds > 0) {
+                    const lg = data.largest_gap;
+                    const gapDateStr = lg.date ? new Date(lg.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) : (lg.date || '');
+                    document.getElementById('largestGap').textContent = `${lg.readable} op ${gapDateStr}`;
+                } else {
+                    document.getElementById('largestGap').textContent = 'Geen gegevens';
+                }
 
                 // Update footer
                 document.getElementById('footerText').textContent = `Tracking since ${data.first_timestamp || '...'} - Version 1.0 - Data auto-refreshes every 30 seconds`;
@@ -350,6 +360,15 @@
                     document.getElementById('firstTimestamp').textContent = formattedFirstDate;
                     
                     document.getElementById('todayCountnav').textContent = data.today_count || '0';
+
+                    // Populate largest-gap info (if available)
+                    if (data.largest_gap && data.largest_gap.seconds && data.largest_gap.seconds > 0) {
+                        const lg = data.largest_gap;
+                        const gapDateStr = lg.date ? new Date(lg.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) : (lg.date || '');
+                        document.getElementById('largestGap').textContent = `${lg.readable} op ${gapDateStr}`;
+                    } else {
+                        document.getElementById('largestGap').textContent = 'Geen gegevens';
+                    }
 
                     // Update footer
                     document.getElementById('footerText').textContent = `Tracking since ${formattedFirstDate} - Version 1.0 - Data auto-refreshes every 30 seconds`;
