@@ -184,6 +184,21 @@ nohup python web_app.py > dashboard.log 2>&1 &
 ```
 
 ## How It Works
+## Bluesky Integration
+
+The Bluesky Integration allows users to connect their Radio Checker application with the Bluesky platform, enabling seamless sharing of detected songs and real-time updates.
+
+### Features
+- Share detected songs directly to Bluesky.
+- Receive notifications for new detections on Bluesky.
+
+### Setup
+1. Create a Bluesky account if you don't have one.
+2. Obtain your API key from the Bluesky developer portal.
+3. Update your `config.yaml` with the Bluesky API key.
+
+### Usage
+Once configured, the application will automatically post updates to your Bluesky account whenever a target song is detected.
 
 1. **Fetch playlists** (~100-200ms):
    - Fetches the relisten.nl homepage displaying real-time playlists for 19 stations
