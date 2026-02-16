@@ -371,8 +371,8 @@ function station_charts($station_name) {
 function index_data() {
     $pdo = get_db_connection();
     
-    // Get all songs (limit 1000) for listing
-    $stmt = $pdo->query("SELECT * FROM songs ORDER BY timestamp DESC LIMIT 1000");
+    // Get all songs for listing
+    $stmt = $pdo->query("SELECT * FROM songs ORDER BY timestamp DESC");
     $songs = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Get first and last timestamps (full-table)
@@ -479,6 +479,16 @@ function index_data() {
     $stmt = $pdo->prepare("SELECT COUNT(*) FROM songs WHERE DATE(timestamp) = ?");
     $stmt->execute([$today]);
     $today_count = $stmt->fetchColumn();
+
+    // get day with the most songs
+    $stmt = $pdo->query("SELECT DATE(timestamp) as day, COUNT(*) as count FROM songs GROUP BY day ORDER BY count DESC LIMIT 1");
+    $most_songs_day = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if ($most_songs_day && isset($most_songs_day['day'])) {
+        $date = new DateTime($most_songs_day['day']);
+        $most_songs_day['day'] = $date->format('d M Y');
+    }
+
     
     // Format songs
     $songs_data = [];
@@ -503,7 +513,8 @@ function index_data() {
         'today_count' => $today_count,
         'first_timestamp' => $first_timestamp,
         'last_timestamp' => $last_timestamp,
-        'largest_gap' => $largest_gap
+        'largest_gap' => $largest_gap,
+        'most_songs_day' => $most_songs_day
     ];
 }
 

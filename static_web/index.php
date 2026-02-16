@@ -14,11 +14,7 @@
                 </div>
             </div>
             <div class="col-md-3">
-                <p>Sinds <span id="firstTimestamp">...</span> is Phil Collins <strong id="totalCount">...</strong> keer gedetecteerd,
-                        op <strong id="uniqueStations">...</strong> verschillende radiozenders,
-                        met <strong id="uniqueSongs">...</strong> verschillende nummers.
-                </p>
-                <p class="mb-0"><small>Langste onderbreking tussen detecties: <strong id="largestGap">...</strong></small></p>
+                
             </div>
         </div>
         <div class="row mb-4">
@@ -93,8 +89,23 @@
         </div>
 
         <!-- Fourth Row: Weekday and Hours Charts -->
+         
         <div class="row mb-4">
-            <div class="col-md-6">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <p>Sinds <span id="firstTimestamp">...</span> is Phil Collins <strong id="totalCount">...</strong> keer gedetecteerd,
+                           op <strong id="uniqueStations">...</strong> verschillende radiozenders,
+                           met <strong id="uniqueSongs">...</strong> verschillende nummers.
+                        </p>
+                        <p>Op de dag met de meeste detecties (<strong id="mostSongsDay">...</strong>)
+                           werden <strong id="mostSongsCount">...</strong> nummers van Phil gedetecteerd.
+                        </p>
+                        <p class="mb-0">Langste onderbreking tussen detecties: <strong id="largestGap">...</strong></p>    
+                        </div>
+                </div>
+            </div>      
+            <div class="col-md-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <h6 class="card-title">Detecties per dag van de week</h6>
@@ -104,7 +115,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="card h-100">
                     <div class="card-body">
                         <h6 class="card-title">Detecties per uur van de dag</h6>
@@ -114,6 +125,7 @@
                     </div>
                 </div>
             </div>
+      
         </div>
 
         <?php include 'includes/footer.html'; ?>
@@ -137,6 +149,8 @@
                 document.getElementById('totalCount').textContent = data.total_count;
                 document.getElementById('uniqueStations').textContent = data.stations.length;
                 document.getElementById('uniqueSongs').textContent = data.song_titles.length;
+                document.getElementById('mostSongsDay').textContent = data.most_songs_day ? data.most_songs_day.day : '...';
+                document.getElementById('mostSongsCount').textContent = data.most_songs_day ? data.most_songs_day.count : '...';
                 
                 // Format first timestamp as "10 feb 2026"
                 const firstDate = new Date(data.first_timestamp);
@@ -415,6 +429,8 @@
                     document.getElementById('totalCount').textContent = data.total_count;
                     document.getElementById('uniqueStations').textContent = data.stations.length;
                     document.getElementById('uniqueSongs').textContent = data.song_titles.length;
+                    document.getElementById('mostSongsDay').textContent = data.most_songs_day ? data.most_songs_day.day : '...';
+                    document.getElementById('mostSongsCount').textContent = data.most_songs_day ? data.most_songs_day.count : '...';
                     
                     // Format first timestamp
                     const firstDate = new Date(data.first_timestamp);
