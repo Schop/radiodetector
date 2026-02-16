@@ -30,23 +30,8 @@
                                 <small class="d-block mt-2">radiostations checken...</small>
                             </div>
                         </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4 mb-2">
-                <div class="card h-100">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="card-title mb-0">Recente detecties -  <a href="detections.php" class="text-danger">Bekijk hier alle detecties</a></h6>
-                        </div>
-                        <div id="recentDetectionsContainer" style="height: 250px; overflow-y: auto;">
-                            <div class="text-center text-muted py-3">
-                                <div class="spinner-border spinner-border-sm" role="status">
-                                    <span class="visually-hidden">Loading...</span>
-                                </div>
-                                <small class="d-block mt-2">Loading recent detections...</small>
-                            </div>
-                        </div>                        
+                        <p>Gemiddeld worden er per uur <strong id="averagePerHour">...</strong>
+                           nummers van Phil Collins gedetecteerd op de Nederlandse radiozenders.</p>
                     </div>
                 </div>
             </div>
@@ -60,6 +45,25 @@
                     </div>
                 </div>
             </div>
+            <div class="col-md-4 mb-2">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <p>Sinds <span id="firstTimestamp">...</span> is Phil Collins <strong id="totalCount">...</strong> keer gedetecteerd,
+                           op <strong id="uniqueStations">...</strong> verschillende radiozenders,
+                           met <strong id="uniqueSongs">...</strong> verschillende nummers.
+                        </p>
+                        <p>Op de dag met de meeste detecties (<strong id="mostSongsDay">...</strong>)
+                           werden <strong id="mostSongsCount">...</strong> nummers van Phil gedetecteerd.
+                        </p>
+                        <hr>
+                        <p>De langste onderbreking tussen detecties was <strong id="largestGap">...</strong>. Aan deze periode van rust kwam een einde toen <strong id="largestGapEndStation">...</strong>
+                           het nummer <strong id="largestGapEndSong">...</strong>
+                            draaide op <strong id="largestGapEndTime">...</strong>.</p>
+                    </div>
+                </div>
+            </div>                      
+
+
         </div>
 
         <!-- Third Row: Top Charts -->
@@ -91,20 +95,23 @@
         <!-- Fourth Row: Weekday and Hours Charts -->
          
         <div class="row mb-4">
-            <div class="col-md-4">
+            <div class="col-md-4 mb-2">
                 <div class="card h-100">
                     <div class="card-body">
-                        <p>Sinds <span id="firstTimestamp">...</span> is Phil Collins <strong id="totalCount">...</strong> keer gedetecteerd,
-                           op <strong id="uniqueStations">...</strong> verschillende radiozenders,
-                           met <strong id="uniqueSongs">...</strong> verschillende nummers.
-                        </p>
-                        <p>Op de dag met de meeste detecties (<strong id="mostSongsDay">...</strong>)
-                           werden <strong id="mostSongsCount">...</strong> nummers van Phil gedetecteerd.
-                        </p>
-                        <p class="mb-0">Langste onderbreking tussen detecties: <strong id="largestGap">...</strong></p>    
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="card-title mb-0">Recente detecties -  <a href="detections.php" class="text-danger">Bekijk hier alle detecties</a></h6>
                         </div>
+                        <div id="recentDetectionsContainer" style="height: 250px; overflow-y: auto;">
+                            <div class="text-center text-muted py-3">
+                                <div class="spinner-border spinner-border-sm" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <small class="d-block mt-2">Loading recent detections...</small>
+                            </div>
+                        </div>                        
+                    </div>
                 </div>
-            </div>      
+            </div>    
             <div class="col-md-4">
                 <div class="card h-100">
                     <div class="card-body">
@@ -151,6 +158,7 @@
                 document.getElementById('uniqueSongs').textContent = data.song_titles.length;
                 document.getElementById('mostSongsDay').textContent = data.most_songs_day ? data.most_songs_day.day : '...';
                 document.getElementById('mostSongsCount').textContent = data.most_songs_day ? data.most_songs_day.count : '...';
+                document.getElementById('averagePerHour').textContent = data.average_per_hour !== null ? data.average_per_hour : '...';
                 
                 // Format first timestamp as "10 feb 2026"
                 const firstDate = new Date(data.first_timestamp);
@@ -167,9 +175,25 @@
                 if (data.largest_gap && data.largest_gap.seconds && data.largest_gap.seconds > 0) {
                     const lg = data.largest_gap;
                     const gapDateStr = lg.date ? new Date(lg.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) : (lg.date || '');
-                    document.getElementById('largestGap').textContent = `${lg.readable} op ${gapDateStr}`;
+                    document.getElementById('largestGap').textContent = `${lg.readable}`;
+                    const stationEl = document.getElementById('largestGapEndStation');
+                    const songEl = document.getElementById('largestGapEndSong');
+                    if (lg.end_station) {
+                        stationEl.innerHTML = `<a href="/station.php#${encodeURIComponent(lg.end_station)}" class="text-decoration-none">${lg.end_station}</a>`;
+                    } else {
+                        stationEl.textContent = '...';
+                    }
+                    if (lg.end_song) {
+                        songEl.innerHTML = `<a href="/song.php#${encodeURIComponent(lg.end_song)}" class="text-decoration-none">${lg.end_song}</a>`;
+                    } else {
+                        songEl.textContent = '...';
+                    }
+                    document.getElementById('largestGapEndTime').textContent = `${gapDateStr}` || '...';
                 } else {
                     document.getElementById('largestGap').textContent = 'Geen gegevens';
+                    document.getElementById('largestGapEndStation').textContent = '...';
+                    document.getElementById('largestGapEndSong').textContent = '...';
+                    document.getElementById('largestGapEndTime').textContent = '...';
                 }
 
                 // Update footer
@@ -431,6 +455,7 @@
                     document.getElementById('uniqueSongs').textContent = data.song_titles.length;
                     document.getElementById('mostSongsDay').textContent = data.most_songs_day ? data.most_songs_day.day : '...';
                     document.getElementById('mostSongsCount').textContent = data.most_songs_day ? data.most_songs_day.count : '...';
+                    document.getElementById('averagePerHour').textContent = data.average_per_hour !== null ? data.average_per_hour : '...';
                     
                     // Format first timestamp
                     const firstDate = new Date(data.first_timestamp);
@@ -448,8 +473,24 @@
                         const lg = data.largest_gap;
                         const gapDateStr = lg.date ? new Date(lg.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', year: 'numeric' }) : (lg.date || '');
                         document.getElementById('largestGap').textContent = `${lg.readable} op ${gapDateStr}`;
+                        const stationEl2 = document.getElementById('largestGapEndStation');
+                        const songEl2 = document.getElementById('largestGapEndSong');
+                        if (lg.end_station) {
+                            stationEl2.innerHTML = `<a href="/station.php#${encodeURIComponent(lg.end_station)}" class="text-decoration-none">${lg.end_station}</a>`;
+                        } else {
+                            stationEl2.textContent = '...';
+                        }
+                        if (lg.end_song) {
+                            songEl2.innerHTML = `<a href="/song.php#${encodeURIComponent(lg.end_song)}" class="text-decoration-none">${lg.end_song}</a>`;
+                        } else {
+                            songEl2.textContent = '...';
+                        }
+                        document.getElementById('largestGapEndTime').textContent = gapDateStr || '...';
                     } else {
                         document.getElementById('largestGap').textContent = 'Geen gegevens';
+                        document.getElementById('largestGapEndStation').textContent = '...';
+                        document.getElementById('largestGapEndSong').textContent = '...';
+                        document.getElementById('largestGapEndTime').textContent = '...';
                     }
 
                     // Update footer

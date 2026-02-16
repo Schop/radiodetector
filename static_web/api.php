@@ -381,6 +381,16 @@ function index_data() {
     $first_ts = $ts_row[0];
     $last_ts = $ts_row[1];
     
+    // Calculate total hours between first and last timestamp (rounded to whole hours)
+    $hours_between = null;
+    if ($first_ts && $last_ts) {
+        $dt_first = parse_iso_timestamp($first_ts);
+        $dt_last = parse_iso_timestamp($last_ts);
+        if ($dt_first && $dt_last) {
+            $diff_seconds = $dt_last->getTimestamp() - $dt_first->getTimestamp();
+            $hours_between = (int)round($diff_seconds / 3600);
+        }
+    }
     $first_timestamp = null;
     $last_timestamp = null;
     if ($first_ts) {
@@ -397,23 +407,27 @@ function index_data() {
     $largest_gap_seconds = 0;
     $gap_start_ts = null;
     $gap_end_ts = null;
+    $gap_end_song = null;
+    $gap_end_station = null;
 
     try {
-        $stmt = $pdo->query("SELECT timestamp FROM songs ORDER BY timestamp ASC");
-        $all_timestamps = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $stmt = $pdo->query("SELECT timestamp, song, station FROM songs ORDER BY timestamp ASC");
+        $all_timestamps = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         $prev_epoch = null;
         $prev_iso = null;
         foreach ($all_timestamps as $iso) {
-            $dt = parse_iso_timestamp($iso);
+            $dt = parse_iso_timestamp($iso['timestamp'] ?? null);
             if (!$dt) continue;
             $epoch = $dt->getTimestamp();
-            if ($prev_epoch !== null) {
+            if ($prev_epoch !== null && is_array($prev_iso)) {
                 $diff = $epoch - $prev_epoch;
                 if ($diff > $largest_gap_seconds) {
                     $largest_gap_seconds = $diff;
-                    $gap_start_ts = $prev_iso; // earlier
-                    $gap_end_ts = $iso;        // later
+                    $gap_start_ts = $prev_iso['timestamp'] ?? null;
+                    $gap_end_ts = $iso['timestamp'] ?? null;
+                    $gap_end_song = $iso['song'] ?? null;
+                    $gap_end_station = $iso['station'] ?? null;
                 }
             }
             $prev_epoch = $epoch;
@@ -430,10 +444,10 @@ function index_data() {
         $hours = intdiv($s % 86400, 3600);
         $mins = intdiv($s % 3600, 60);
         $secs = $s % 60;
-        if ($days > 0) return sprintf('%dd %dh %dm', $days, $hours, $mins);
-        if ($hours > 0) return sprintf('%dh %dm', $hours, $mins);
-        if ($mins > 0) return sprintf('%dm %ds', $mins, $secs);
-        return sprintf('%ds', $secs);
+        if ($days > 0) return sprintf('%d dagen, %d uur en %d minuten', $days, $hours, $mins);
+        if ($hours > 0) return sprintf('%d uur en %d minuten', $hours, $mins);
+        if ($mins > 0) return sprintf('%d minuten en %d seconden', $mins, $secs);
+        return sprintf('%d seconden', $secs);
     };
 
     $largest_gap = null;
@@ -450,6 +464,8 @@ function index_data() {
             'readable' => $format_interval($largest_gap_seconds),
             'start_timestamp' => $gap_start_ts,
             'end_timestamp' => $gap_end_ts,
+            'end_song' => $gap_end_song,
+            'end_station' => $gap_end_station,
             'date' => $gap_day
         ];
     } else {
@@ -510,7 +526,9 @@ function index_data() {
         'song_titles' => $song_titles,
         'target_artists' => $target_artists,
         'total_count' => count($songs_data),
+        'average_per_hour' => $hours_between > 0 ? round(count($songs_data) / $hours_between, 2) : null,
         'today_count' => $today_count,
+        'hours_between' => $hours_between,
         'first_timestamp' => $first_timestamp,
         'last_timestamp' => $last_timestamp,
         'largest_gap' => $largest_gap,
