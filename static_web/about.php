@@ -11,7 +11,9 @@
                     
                     <div class="card mb-3">
                         <div class="card-body">
-                            <p>Je zet de radio aan. Eerst verkeersinformatie, dan een reclame, en dan… ja hoor: die onvermijdelijke drumfill. Was dat nou wéér Phil Collins? Het leek me leuk om dat gevoel eens te testen met cijfers in plaats van zuchten. Niet omdat ik iets tegen de persoon Phil Collins heb — integendeel, alle respect — maar mijn oren zijn het niet altijd eens met zijn muzikale keuzes.
+                            <p>Je zet de radio aan. Eerst verkeersinformatie, dan een reclame, en dan… ja hoor: die onvermijdelijke drumfill. Was dat nou wéér Phil Collins?
+                                Ik heb het gevoel dat hij wel heel vaak op de radio te horen is, en het leek me leuk om dat gevoel eens te testen met cijfers in plaats van zuchten.
+                                Niet omdat ik iets tegen de persoon Phil Collins heb — integendeel, alle respect — maar mijn oren zijn het niet altijd eens met zijn muzikale keuzes.
                             </p>
                             <p>Zo ontstond de Phil Collins Detector: een speels, lichtelijk obsessief project dat bijhoudt hoe vaak Phil Collins voorbij komt op Nederlandse radiozenders. Geen grote kruistocht, wel een knipoog en een dosis data. De site luistert mee met publieke “now playing”-informatie, telt de draaibeurten, en zet alles netjes op een rij: per zender, per dag, per uur. Je ziet trends, piekmomenten, en kunt zelf ontdekken op welke zenders je de grootste kans hebt om “In the Air Tonight” of “Sussudio” te horen terwijl je net je boterham smeert.
                             </p>

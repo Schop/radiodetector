@@ -8,7 +8,7 @@ header('Content-Type: application/json');
 header('Access-Control-Allow-Origin: *');
 
 // absolute path to the SQLite DB (ensure PHP uses the same file you inspect locally)
-$db_path = __DIR__ . '/radio_songs.db';
+$db_path = 'radio_songs.db';
 
 function get_song_count() {
     global $db_path;
@@ -84,9 +84,6 @@ if (isset($_GET['db_info']) && $_GET['db_info'] == '1') {
     exit;
 }
 
-// Database path - adjust as needed
-$db_path = 'radio_songs.db';
-
 function get_db_connection() {
     global $db_path;
     try {
@@ -155,7 +152,7 @@ function chart_data() {
         $ts = parse_iso_timestamp($timestamp);
         if ($ts) {
             $hour = (int)$ts->format('H');
-            $weekday = (int)$ts->format('w');
+            $weekday = ((int)$ts->format('N')) - 1;
             $hours[$hour] += 1;
             $days_of_week[$weekday] += 1;
             $date_key = $ts->format('Y-m-d');
@@ -326,7 +323,7 @@ function station_charts($station_name) {
         $ts = parse_iso_timestamp($timestamp);
         if ($ts) {
             $hours[(int)$ts->format('H')] += 1;
-            $weekdays[(int)$ts->format('w')] += 1;
+            $weekdays[((int)$ts->format('N')) - 1] += 1;
             $date_key = $ts->format('Y-m-d');
             $days_count[$date_key] = ($days_count[$date_key] ?? 0) + 1;
         }
@@ -586,7 +583,7 @@ function artist_charts($artist_name) {
         $ts = parse_iso_timestamp($timestamp);
         if ($ts) {
             $hours[(int)$ts->format('H')] += 1;
-            $weekdays[(int)$ts->format('w')] += 1;
+            $weekdays[((int)$ts->format('N')) - 1] += 1;
         }
     }
     
@@ -686,7 +683,7 @@ function song_charts($song_name) {
         $ts = parse_iso_timestamp($timestamp);
         if ($ts) {
             $hours[(int)$ts->format('H')] += 1;
-            $weekdays[(int)$ts->format('w')] += 1;
+            $weekdays[((int)$ts->format('N')) - 1] += 1;
             $date_key = $ts->format('Y-m-d');
             $days_count[$date_key] = ($days_count[$date_key] ?? 0) + 1;
         }

@@ -92,6 +92,30 @@
             </div>
         </div>
 
+        <!-- Fourth Row: Weekday and Hours Charts -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h6 class="card-title">Detecties per dag van de week</h6>
+                        <div style="height: 300px;">
+                            <canvas id="weekdaysChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <h6 class="card-title">Detecties per uur van de dag</h6>
+                        <div style="height: 300px;">
+                            <canvas id="hoursChart" width="400" height="300"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <?php include 'includes/footer.html'; ?>
         </main>
     </div>
@@ -260,6 +284,48 @@
                                             window.location.href = `/song.php#${encodeURIComponent(song)}`;
                                         }
                                     }
+                                }
+                            });
+
+                            // Weekdays chart
+                            new Chart(document.getElementById('weekdaysChart'), {
+                                type: 'bar',
+                                data: {
+                                    labels: chartData.weekdays.labels,
+                                    datasets: [{
+                                        label: 'Detecties',
+                                        data: chartData.weekdays.data,
+                                        backgroundColor: 'rgba(153, 102, 255, 0.6)',
+                                        borderColor: 'rgba(153, 102, 255, 1)',
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                                    plugins: { legend: { display: false } }
+                                }
+                            });
+
+                            // Hours chart
+                            new Chart(document.getElementById('hoursChart'), {
+                                type: 'bar',
+                                data: {
+                                    labels: chartData.hours.labels,
+                                    datasets: [{
+                                        label: 'Detecties',
+                                        data: chartData.hours.data,
+                                        backgroundColor: 'rgba(255, 159, 64, 0.6)',
+                                        borderColor: 'rgba(255, 159, 64, 1)',
+                                        borderWidth: 1
+                                    }]
+                                },
+                                options: {
+                                    responsive: true,
+                                    maintainAspectRatio: false,
+                                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                                    plugins: { legend: { display: false } }
                                 }
                             });
                         })
