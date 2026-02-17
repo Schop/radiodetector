@@ -17,11 +17,12 @@ Notes:
 from typing import Optional
 import os
 import requests
+from datetime import datetime
 
 # Replace these placeholder values before publishing or running on your Pi.
 # Do NOT commit real credentials to version control.
-DEFAULT_IDENTIFIER = 'YOUR_BLUESKY_IDENTIFIER'
-DEFAULT_PASSWORD = 'YOUR_BLUESKY_PASSWORD'
+DEFAULT_IDENTIFIER = 'john.schop@gmx.com'
+DEFAULT_PASSWORD = 'nrdo-4fhd-fz6k-m75n'
 
 
 class BlueskyPoster:
@@ -35,6 +36,7 @@ class BlueskyPoster:
         self.password = password or os.getenv('BLUESKY_PASSWORD') or DEFAULT_PASSWORD
         self.access_jwt = access_jwt or os.getenv('BLUESKY_ACCESS_JWT')
         self.headers = {}
+        self.did: Optional[str] = None
 
         if self.access_jwt:
             self.headers = {'Authorization': f'Bearer {self.access_jwt}'}
@@ -60,6 +62,8 @@ class BlueskyPoster:
             if token:
                 self.access_jwt = token
                 self.headers = {'Authorization': f'Bearer {self.access_jwt}'}
+                # store did if returned (needed for repo.createRecord fallback)
+                self.did = data.get('did') or data.get('handle')
                 return True
 
         raise RuntimeError(f'Failed to create Bluesky session: {resp.status_code} {resp.text}')
@@ -72,6 +76,7 @@ class BlueskyPoster:
         if not self.access_jwt:
             self.create_session()
 
+        # First try the high-level feed.post endpoint
         url = f"{self.service}/xrpc/app.bsky.feed.post"
         payload = {'text': text}
         resp = requests.post(url, json=payload, headers=self.headers, timeout=15)
@@ -81,7 +86,46 @@ class BlueskyPoster:
             except Exception:
                 return {'status': 'ok', 'raw': resp.text}
 
+        # Inspect JSON error if available
+        err_json = None
+        try:
+            err_json = resp.json()
+        except Exception:
+            err_json = None
+
+        # If the server doesn't support app.bsky.feed.post, fallback to createRecord
+        if resp.status_code == 404 or (isinstance(err_json, dict) and err_json.get('error') == 'XRPCNotSupported'):
+            return self.create_record(text)
+
         raise RuntimeError(f'Failed to post to Bluesky: {resp.status_code} {resp.text}')
+
+    def create_record(self, text: str) -> dict:
+        """Fallback to create a repo record in `app.bsky.feed.post` collection."""
+        if not self.did:
+            # Try to create a session to obtain DID
+            self.create_session()
+
+        if not self.did:
+            raise RuntimeError('No DID available for createRecord fallback')
+
+        url = f"{self.service}/xrpc/com.atproto.repo.createRecord"
+        payload = {
+            'repo': self.did,
+            'collection': 'app.bsky.feed.post',
+            'record': {
+                'createdAt': datetime.utcnow().isoformat() + 'Z',
+                'text': text,
+            }
+        }
+
+        resp = requests.post(url, json=payload, headers=self.headers, timeout=15)
+        if resp.status_code in (200, 201):
+            try:
+                return resp.json()
+            except Exception:
+                return {'status': 'ok', 'raw': resp.text}
+
+        raise RuntimeError(f'Failed to create record on Bluesky: {resp.status_code} {resp.text}')
 
 
 def post_song(artist: str, song: str, station: Optional[str] = None, tag: Optional[str] = 'nowplaying') -> bool:

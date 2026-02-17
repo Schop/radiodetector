@@ -7,30 +7,15 @@
             <?php include 'includes/nav.html'; ?>
 
             <h1 id="songTitle">Loading...</h1>
-            <h3 class="text-muted mb-4" id="songSubtitle">Song details and play history</h3>
+            <h5 class="text-muted mb-4" id="songSubtitle">Song details and play history</h5>
 
             <!-- Summary Stats -->
             <div class="row mb-4">
                 <div class="col-md-4">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h6 class="card-title"><span id="songNameStats">...</span> Statistieken</h6>
-                            <table class="compact-stats-table w-100">
-                                <tbody>
-                                    <tr>
-                                        <td>Totaal gespeeld</td>
-                                        <td id="totalDetections">...</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Unieke Radiostations</td>
-                                        <td id="uniqueStations">...</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Artiesten</td>
-                                        <td id="uniqueArtists">...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <p>Sinds <strong><span id="firstTimestamp">...</span></strong> is het nummer <strong><span id="songNameStats">...</span></strong> in totaal <strong><span id="totalDetections">...</span></strong> keer gedraaid op <strong><span id="uniqueStations">...</span></strong> verschillende radiostations.</p> 
+
                         </div>
                     </div>
                 </div>
@@ -126,10 +111,26 @@
                         return;
                     }
 
+                    // Format first timestamp as "10 feb 2026"
+                    const firstDate = new Date(data.first_timestamp);
+                    const formattedFirstDate = firstDate.toLocaleDateString('nl-NL', { 
+                        day: 'numeric', 
+                        month: 'short', 
+                        year: 'numeric' 
+                    });
+                    document.getElementById('firstTimestamp').textContent = formattedFirstDate;
+
+                    // Format last timestamp as "10 feb 2026"
+                    const lastDate = new Date(data.last_timestamp);
+                    const formattedLastDate = lastDate.toLocaleDateString('nl-NL', { 
+                        day: 'numeric', 
+                        month: 'short', 
+                        year: 'numeric' 
+                    });
+
                     // Update stats
                     document.getElementById('totalDetections').textContent = data.total_detections;
                     document.getElementById('uniqueStations').textContent = data.stations.length;
-                    document.getElementById('uniqueArtists').textContent = data.artists.length;
 
                     // Populate recent detections table (last 10 detections)
                     if (data.songs && data.songs.length > 0) {
@@ -219,7 +220,8 @@
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            cutout: '50%',
+                            cutout: '20%',
+                            animation: { animateRotate: true, animateScale: true },
                             plugins: {
                                 legend: {
                                     position: 'bottom',
@@ -228,7 +230,17 @@
                                         font: { size: 11 }
                                     }
                                 }
-                            }
+                            },
+                            onHover: (event, elements) => {
+                                event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+                            },
+                            onClick: (event, elements) => {
+                                if (elements.length > 0) {
+                                    const index = elements[0].index;
+                                    const station = data.stations.labels[index];
+                                    window.location.href = `/station.php#${encodeURIComponent(station)}`;
+                                }
+                            }                            
                         }
                     });
 

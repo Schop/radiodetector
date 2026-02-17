@@ -14,19 +14,8 @@
                 <div class="col-md-4">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h6 class="card-title">Statistieken</h6>
-                            <table class="compact-stats-table w-100">
-                                <tbody>
-                                    <tr>
-                                        <td>Totaal aantal detecties</td>
-                                        <td id="totalSongs">...</td>
-                                    </tr>
-                                    <tr>
-                                        <td>Unieke nummers</td>
-                                        <td id="uniqueSongs">...</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                            <p>Sinds <strong><span id="firstTimestamp">...</span></strong> is er in totaal <strong><span id="totalSongs">...</span></strong> keer een nummer gedraaid op <strong><span id="statStation">...</span></strong>.</p>
+                            <p>Er zijn in totaal <strong><span id="uniqueSongs">...</span></strong> verschillende nummers gedraaid.</p>
                         </div>
                     </div>
                 </div>
@@ -77,7 +66,7 @@
                 <div class="col-md-4">
                     <div class="card h-100">
                         <div class="card-body" style="display: flex; flex-direction: column;">
-                            <h6 class="card-title">Recente detecties</h6>
+                            <h6 class="card-title">Recente detecties - <a href="detections.php" class="text-danger">Bekijk hier alle detecties</a></h6>
                             <div id="recentDetectionsContainer" style="flex: 1; overflow-y: auto;">
                                 <div class="text-center text-muted py-3">
                                     <div class="spinner-border spinner-border-sm" role="status">
@@ -117,6 +106,16 @@
                 // console.log('Station data received:', data);
                 document.getElementById('totalSongs').textContent = data.total_songs;
                 document.getElementById('uniqueSongs').textContent = data.song_titles.length;
+                document.getElementById('statStation').textContent = stationName;
+
+                // Format first timestamp as "10 feb 2026"
+                    const firstDate = new Date(data.first_timestamp);
+                    const formattedFirstDate = firstDate.toLocaleDateString('nl-NL', { 
+                        day: 'numeric', 
+                        month: 'short', 
+                        year: 'numeric' 
+                    });
+                    document.getElementById('firstTimestamp').textContent = formattedFirstDate;
 
                 // Populate recent detections table (last 8 detections)
                 if (data.songs && data.songs.length > 0) {

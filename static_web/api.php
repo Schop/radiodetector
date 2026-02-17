@@ -185,7 +185,10 @@ function chart_data() {
             'data' => $days_of_week
         ],
         'timeline' => [
-            'labels' => array_keys($sorted_days),
+            'labels' => array_map(function($d) {
+                $dt = DateTime::createFromFormat('Y-m-d', $d);
+                return $dt ? strtolower($dt->format('j M')) : $d;
+            }, array_keys($sorted_days)),
             'data' => array_values($sorted_days)
         ]
     ];
@@ -267,6 +270,23 @@ function now_playing() {
 function station_data($station_name) {
     $pdo = get_db_connection();
     
+    // Get first and last timestamps (full-table)
+    $stmt = $pdo->query("SELECT MIN(timestamp), MAX(timestamp) FROM songs");
+    $ts_row = $stmt->fetch(PDO::FETCH_NUM);
+    $first_ts = $ts_row[0];
+    $last_ts = $ts_row[1];
+
+    $first_timestamp = null;
+    $last_timestamp = null;
+    if ($first_ts) {
+        $ts = parse_iso_timestamp($first_ts);
+        $first_timestamp = $ts ? $ts->format('D M j H:i:s Y') : $first_ts;
+    }
+    if ($last_ts) {
+        $ts = parse_iso_timestamp($last_ts);
+        $last_timestamp = $ts ? $ts->format('d M Y at H:i') : $last_ts;
+    }
+
     // Get all songs from station
     $stmt = $pdo->prepare("SELECT * FROM songs WHERE station = ? ORDER BY timestamp DESC");
     $stmt->execute([$station_name]);
@@ -303,7 +323,9 @@ function station_data($station_name) {
         'total_songs' => $total_songs,
         'artists' => $artists,
         'song_titles' => $song_titles,
-        'songs' => $songs_data
+        'songs' => $songs_data,
+        'first_timestamp' => $first_timestamp,
+        'last_timestamp' => $last_timestamp
     ];
 }
 
@@ -362,7 +384,10 @@ function station_charts($station_name) {
             'data' => array_column($top_songs, 'count')
         ],
         'timeline' => [
-            'labels' => array_keys($sorted_days),
+            'labels' => array_map(function($d) {
+                $dt = DateTime::createFromFormat('Y-m-d', $d);
+                return $dt ? strtolower($dt->format('j M')) : $d;
+            }, array_keys($sorted_days)),
             'data' => array_values($sorted_days)
         ]
     ];
@@ -649,6 +674,23 @@ function artist_charts($artist_name) {
 function song_data($song_name) {
     $pdo = get_db_connection();
     
+    // Get first and last timestamps (full-table)
+    $stmt = $pdo->query("SELECT MIN(timestamp), MAX(timestamp) FROM songs");
+    $ts_row = $stmt->fetch(PDO::FETCH_NUM);
+    $first_ts = $ts_row[0];
+    $last_ts = $ts_row[1];
+
+    $first_timestamp = null;
+    $last_timestamp = null;
+    if ($first_ts) {
+        $ts = parse_iso_timestamp($first_ts);
+        $first_timestamp = $ts ? $ts->format('D M j H:i:s Y') : $first_ts;
+    }
+    if ($last_ts) {
+        $ts = parse_iso_timestamp($last_ts);
+        $last_timestamp = $ts ? $ts->format('d M Y at H:i') : $last_ts;
+    }
+
     // Get all detections of this song
     $stmt = $pdo->prepare("SELECT * FROM songs WHERE song = ? ORDER BY timestamp DESC");
     $stmt->execute([$song_name]);
@@ -692,7 +734,9 @@ function song_data($song_name) {
         'stations' => $stations,
         'artists' => $artists,
         'songs' => $songs_data,
-        'today_count' => $today_count
+        'today_count' => $today_count,
+        'first_timestamp' => $first_timestamp,
+        'last_timestamp' => $last_timestamp
     ];
 }
 
@@ -751,7 +795,10 @@ function song_charts($song_name) {
             'data' => array_column($stations_data, 'count')
         ],
         'timeline' => [
-            'labels' => array_keys($sorted_days),
+            'labels' => array_map(function($d) {
+                $dt = DateTime::createFromFormat('Y-m-d', $d);
+                return $dt ? strtolower($dt->format('j M')) : $d;
+            }, array_keys($sorted_days)),
             'data' => array_values($sorted_days)
         ]
     ];

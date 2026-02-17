@@ -72,7 +72,7 @@
                 <div class="card h-100">
                     <div class="card-body">
                         <h6 class="card-title">Top 5 Radiostations die Phil Collins draaien</h6>
-                        <small class="text-muted">klik op de balken voor meer details</small>
+                        <small class="text-muted">klik op de grafiek voor meer details over een zender</small>
                         <div style="height: 300px;">
                             <canvas id="stationsChart" width="400" height="300"></canvas>
                         </div>
@@ -83,7 +83,7 @@
                 <div class="card h-100">
                     <div class="card-body">
                         <h6 class="card-title">Top 5 Nummers die het vaakst worden gedraaid</h6>
-                        <small class="text-muted">klik op de balken voor meer details</small>
+                        <small class="text-muted">klik op de grafiek voor meer details over een nummer</small>
                         <div style="height: 300px;">
                             <canvas id="songsChart" width="400" height="300"></canvas>
                         </div>
@@ -261,25 +261,33 @@
                                 }
                             });
 
-                            // Stations chart
+                            // Stations chart (doughnut)
                             new Chart(document.getElementById('stationsChart'), {
-                                type: 'bar',
+                                type: 'doughnut',
                                 data: {
                                     labels: chartData.stations.labels,
                                     datasets: [{
-                                        label: 'Detections',
+                                        label: 'Detecties per zender',
                                         data: chartData.stations.data,
-                                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                                        borderColor: 'rgba(75, 192, 192, 1)',
+                                        backgroundColor: [
+                                            'rgba(75, 192, 192, 0.8)',
+                                            'rgba(54, 162, 235, 0.8)',
+                                            'rgba(153, 102, 255, 0.8)',
+                                            'rgba(255, 159, 64, 0.8)',
+                                            'rgba(255, 99, 132, 0.8)'
+                                        ],
+                                        borderColor: 'rgba(255,255,255,0.8)',
                                         borderWidth: 1
                                     }]
                                 },
                                 options: {
                                     responsive: true,
                                     maintainAspectRatio: false,
-                                    indexAxis: 'y',
-                                    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
-                                    plugins: { legend: { display: false } },
+                                    cutout: '30%',
+                                    animation: { animateRotate: true, animateScale: true },
+                                    plugins: {
+                                        legend: { display: true, position: 'right' }
+                                    },
                                     onHover: (event, elements) => {
                                         event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
                                     },

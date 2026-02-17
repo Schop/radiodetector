@@ -48,3 +48,4 @@ env/
 *~
 .DS_Store
 /static_web/db_check.php
+/bluesky_post.py
