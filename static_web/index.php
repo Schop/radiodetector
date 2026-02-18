@@ -32,6 +32,7 @@
                         </div>
                         <p>Gemiddeld worden er per uur <strong id="averagePerHour">...</strong>
                            nummers van Phil Collins gedetecteerd op de Nederlandse radiozenders.</p>
+                        <p>Phil was <strong id="lastSongMinutesAgo">...</strong> minuten geleden voor het laatst op de radio te horen, bij <span id="lastSongStation">...</span> met het nummer <span id="lastSongTitle">...</span>.</p>
                     </div>
                 </div>
             </div>
@@ -57,8 +58,8 @@
                         </p>
                         <hr>
                         <p>De langste onderbreking tussen detecties was <strong id="largestGap">...</strong>. Aan deze periode van rust kwam een einde toen <strong id="largestGapEndStation">...</strong>
-                           het nummer <strong id="largestGapEndSong">...</strong>
-                            draaide op <strong id="largestGapEndTime">...</strong>.</p>
+                           het nummer <span id="largestGapEndSong">...</span>
+                            draaide op <span id="largestGapEndTime">...</span>.</p>
                     </div>
                 </div>
             </div>                      
@@ -195,6 +196,11 @@
                     document.getElementById('largestGapEndSong').textContent = '...';
                     document.getElementById('largestGapEndTime').textContent = '...';
                 }
+
+                const lastSongMinutesAgo = data.songs && data.songs.length > 0 ? Math.round((Date.now() - new Date(data.songs[0].timestamp_raw).getTime()) / 60000) : null;
+                document.getElementById('lastSongMinutesAgo').textContent = lastSongMinutesAgo !== null ? lastSongMinutesAgo : '...';
+                document.getElementById('lastSongStation').innerHTML = data.songs && data.songs.length > 0 ? `<a href="/station.php#${encodeURIComponent(data.songs[0].station)}" class="text-decoration-none">${data.songs[0].station}</a>` : '...';
+                document.getElementById('lastSongTitle').innerHTML = data.songs && data.songs.length > 0 ? `<a href="/song.php#${encodeURIComponent(data.songs[0].song)}" class="text-decoration-none">${data.songs[0].song}</a>` : '...';
 
                 // Update footer
                 document.getElementById('footerText').textContent = `Tracking since ${data.first_timestamp || '...'} - Version 1.0 - Data auto-refreshes every 30 seconds`;
@@ -452,7 +458,7 @@
 
         // Refresh dashboard data (stats and recent detections)
         function refreshDashboardData() {
-            // console.log('Refreshing dashboard data...');
+            console.log('Refreshing dashboard data...');
             
             fetch(`${API_BASE}/api/index-data`)
                 .then(response => response.json())
@@ -500,6 +506,12 @@
                         document.getElementById('largestGapEndSong').textContent = '...';
                         document.getElementById('largestGapEndTime').textContent = '...';
                     }
+
+                    const lastSongMinutesAgo = data.songs && data.songs.length > 0 ? Math.round((Date.now() - new Date(data.songs[0].timestamp_raw).getTime()) / 60000) : null;
+                    document.getElementById('lastSongMinutesAgo').textContent = lastSongMinutesAgo !== null ? lastSongMinutesAgo : '...';
+                    document.getElementById('lastSongStation').innerHTML = data.songs && data.songs.length > 0 ? `<a href="/station.php#${encodeURIComponent(data.songs[0].station)}" class="text-decoration-none">${data.songs[0].station}</a>` : '...';
+                    document.getElementById('lastSongTitle').innerHTML = data.songs && data.songs.length > 0 ? `<a href="/song.php#${encodeURIComponent(data.songs[0].song)}" class="text-decoration-none">${data.songs[0].song}</a>` : '...';
+
 
                     // Update footer
                     document.getElementById('footerText').textContent = `Tracking since ${formattedFirstDate} - Version 1.0 - Data auto-refreshes every 30 seconds`;

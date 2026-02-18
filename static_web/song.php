@@ -46,7 +46,7 @@
                 <div class="col-md-4">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h6 class="card-title">Uurverdeling voor <span id="songNameHourly">...</span></h6>
+                            <h6 class="card-title">Gemiddelde per uur van de dag voor <span id="songNameHourly">...</span></h6>
                             <div style="height: 200px;">
                                 <canvas id="hourlyChart" width="400" height="200"></canvas>
                             </div>
