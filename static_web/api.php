@@ -159,7 +159,25 @@ function chart_data() {
             $days_count[$date_key] = ($days_count[$date_key] ?? 0) + 1;
         }
     }
-    
+    // Count how many distinct dates we have for each weekday so we can compute averages
+    $distinct_dates_per_weekday = array_fill(0, 7, 0);
+    foreach (array_keys($days_count) as $date_key) {
+        $dt = DateTime::createFromFormat('Y-m-d', $date_key);
+        if ($dt) {
+            $wd = ((int)$dt->format('N')) - 1;
+            $distinct_dates_per_weekday[$wd] += 1;
+        }
+    }
+
+    // Compute average songs per weekday (total songs on that weekday / number of that weekday dates)
+    $average_weekdays = array_fill(0, 7, 0);
+    for ($i = 0; $i < 7; $i++) {
+        if ($distinct_dates_per_weekday[$i] > 0) {
+            $average_weekdays[$i] = $days_of_week[$i] / $distinct_dates_per_weekday[$i];
+        } else {
+            $average_weekdays[$i] = 0;
+        }
+    }
     // Get last 14 days
     krsort($days_count);
     $sorted_days = array_slice($days_count, 0, 14, true);
@@ -182,7 +200,7 @@ function chart_data() {
         ],
         'weekdays' => [
             'labels' => $day_names,
-            'data' => $days_of_week
+            'data' => $average_weekdays
         ],
         'timeline' => [
             'labels' => array_map(function($d) {
@@ -350,7 +368,24 @@ function station_charts($station_name) {
             $days_count[$date_key] = ($days_count[$date_key] ?? 0) + 1;
         }
     }
-    
+    // Count distinct dates per weekday to compute averages
+    $distinct_dates_per_weekday = array_fill(0, 7, 0);
+    foreach (array_keys($days_count) as $date_key) {
+        $dt = DateTime::createFromFormat('Y-m-d', $date_key);
+        if ($dt) {
+            $wd = ((int)$dt->format('N')) - 1;
+            $distinct_dates_per_weekday[$wd] += 1;
+        }
+    }
+
+    $average_weekdays = array_fill(0, 7, 0);
+    for ($i = 0; $i < 7; $i++) {
+        if ($distinct_dates_per_weekday[$i] > 0) {
+            $average_weekdays[$i] = $weekdays[$i] / $distinct_dates_per_weekday[$i];
+        } else {
+            $average_weekdays[$i] = 0;
+        }
+    }
     // Get last 14 days for this station
     krsort($days_count);
     $sorted_days = array_slice($days_count, 0, 14, true);
@@ -377,7 +412,7 @@ function station_charts($station_name) {
         ],
         'weekdays' => [
             'labels' => $day_names,
-            'data' => $weekdays
+            'data' => $average_weekdays
         ],
         'top_songs' => [
             'labels' => array_column($top_songs, 'song'),
@@ -761,7 +796,24 @@ function song_charts($song_name) {
             $days_count[$date_key] = ($days_count[$date_key] ?? 0) + 1;
         }
     }
-    
+    // Count distinct dates per weekday to compute averages
+    $distinct_dates_per_weekday = array_fill(0, 7, 0);
+    foreach (array_keys($days_count) as $date_key) {
+        $dt = DateTime::createFromFormat('Y-m-d', $date_key);
+        if ($dt) {
+            $wd = ((int)$dt->format('N')) - 1;
+            $distinct_dates_per_weekday[$wd] += 1;
+        }
+    }
+
+    $average_weekdays = array_fill(0, 7, 0);
+    for ($i = 0; $i < 7; $i++) {
+        if ($distinct_dates_per_weekday[$i] > 0) {
+            $average_weekdays[$i] = $weekdays[$i] / $distinct_dates_per_weekday[$i];
+        } else {
+            $average_weekdays[$i] = 0;
+        }
+    }
     // Get last 14 days for this song
     krsort($days_count);
     $sorted_days = array_slice($days_count, 0, 14, true);
@@ -788,7 +840,7 @@ function song_charts($song_name) {
         ],
         'weekdays' => [
             'labels' => $day_names,
-            'data' => $weekdays
+            'data' => $average_weekdays
         ],
         'stations' => [
             'labels' => array_column($stations_data, 'station'),

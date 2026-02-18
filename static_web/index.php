@@ -115,7 +115,7 @@
             <div class="col-md-4">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h6 class="card-title">Detecties per dag van de week</h6>
+                        <h6 class="card-title">Gemiddelde detecties per dag van de week</h6>
                         <div style="height: 300px;">
                             <canvas id="weekdaysChart" width="400" height="300"></canvas>
                         </div>

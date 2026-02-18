@@ -32,9 +32,9 @@
                 <div class="col-md-4">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h6 class="card-title">Verdeling per uur van de dag</h6>
+                            <h6 class="card-title">Laatste 14 dagen</h6>
                             <div style="height: 200px;">
-                                <canvas id="hourlyChart" width="400" height="200"></canvas>
+                                <canvas id="timelineChart" width="400" height="200"></canvas>
                             </div>
                         </div>
                     </div>
@@ -45,7 +45,7 @@
                 <div class="col-md-4">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h6 class="card-title">Verdeling per dag van de week</h6>
+                            <h6 class="card-title">Gemiddelde per dag van de week</h6>
                             <small class="text-muted">klik op de balken voor meer details</small>
                             <div style="height: 200px;">
                                 <canvas id="weekdayChart" width="400" height="200"></canvas>
@@ -56,13 +56,14 @@
                 <div class="col-md-4">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h6 class="card-title">Laatste 14 dagen</h6>
+                            <h6 class="card-title">Verdeling per uur van de dag</h6>
                             <div style="height: 200px;">
-                                <canvas id="timelineChart" width="400" height="200"></canvas>
+                                <canvas id="hourlyChart" width="400" height="200"></canvas>
                             </div>
                         </div>
                     </div>
                 </div>
+
                 <div class="col-md-4">
                     <div class="card h-100">
                         <div class="card-body" style="display: flex; flex-direction: column;">

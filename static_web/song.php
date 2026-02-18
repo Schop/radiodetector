@@ -56,7 +56,7 @@
                 <div class="col-md-4">
                     <div class="card h-100">
                         <div class="card-body">
-                            <h6 class="card-title">Weekdagverdeling voor <span id="songNameWeekly">...</span></h6>
+                            <h6 class="card-title">Gemiddelde per dag van de week voor <span id="songNameWeekly">...</span></h6>
                             <div style="height: 200px;">
                                 <canvas id="weekdayChart" width="400" height="200"></canvas>
                             </div>
@@ -66,7 +66,7 @@
                 <div class="col-md-4">
                     <div class="card h-100">
                         <div class="card-body" style="display: flex; flex-direction: column;">
-                            <h6 class="card-title">Recente detecties van <span id="songNameRecent">...</span> - <a href="/detections.php" class="text-danger">Bekijk hier alle detecties</a></h6>
+                            <h6 class="card-title">Recente detecties - <a href="detections.php" class="text-danger">Bekijk hier alle detecties</a></h6>
                             <div id="recentDetectionsContainer" style="flex: 1; overflow-y: auto;">
                                 <div class="text-center text-muted py-3">
                                     <div class="spinner-border spinner-border-sm" role="status">
