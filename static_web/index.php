@@ -152,6 +152,9 @@
                 return response.json();
             })
             .then(data => {
+                // cache latest index-data for reuse (avoid refetching every minute)
+                window.latestIndexData = data;
+
                 // console.log('Data received:', data);
                 // Update stats
                 document.getElementById('totalCount').textContent = data.total_count;
@@ -488,6 +491,8 @@
             fetch(`${API_BASE}/api/index-data`)
                 .then(response => response.json())
                 .then(data => {
+                    // update cached index-data used by last-song updater
+                    window.latestIndexData = data;
                     // Update stats
                     document.getElementById('totalCount').textContent = data.total_count;
                     document.getElementById('uniqueStations').textContent = data.stations.length;
@@ -576,28 +581,25 @@
         
         // Update last-song minutes/station/title separately (runs immediately and every minute)
         function updateLastSongInfo() {
-            fetch(`${API_BASE}/api/index-data?_=${Date.now()}`)
-                .then(resp => resp.json())
-                .then(idx => {
-                    if (idx.songs && idx.songs.length > 0) {
-                        const last = idx.songs[0];
-                        const lastSongTime = new Date(last.timestamp_raw);
-                        if (!isNaN(lastSongTime.getTime())) {
-                            const minutesAgo = Math.floor((Date.now() - lastSongTime.getTime()) / 60000);
-                            const minutesEl = document.getElementById('lastSongMinutesAgo');
-                            if (minutesEl) minutesEl.textContent = String(minutesAgo);
-                        }
-                        const stationEl = document.getElementById('lastSongStation');
-                        const titleEl = document.getElementById('lastSongTitle');
-                        if (stationEl) stationEl.innerHTML = `<a href="/station.php#${encodeURIComponent(last.station)}" class="text-decoration-none">${last.station || '...'}</a>`;
-                        if (titleEl) titleEl.innerHTML = `<a href="/song.php#${encodeURIComponent(last.song)}" class="text-decoration-none">${last.song || '...'}</a>`;
-                    } else {
-                        const minutesEl = document.getElementById('lastSongMinutesAgo'); if (minutesEl) minutesEl.textContent = '...';
-                        const stationEl = document.getElementById('lastSongStation'); if (stationEl) stationEl.textContent = '...';
-                        const titleEl = document.getElementById('lastSongTitle'); if (titleEl) titleEl.textContent = '...';
-                    }
-                })
-                .catch(err => console.error('Failed to update last-song info:', err));
+            const idx = window.latestIndexData;
+            if (!idx) return; // no data yet
+            if (idx.songs && idx.songs.length > 0) {
+                const last = idx.songs[0];
+                const lastSongTime = new Date(last.timestamp_raw);
+                if (!isNaN(lastSongTime.getTime())) {
+                    const minutesAgo = Math.floor((Date.now() - lastSongTime.getTime()) / 60000);
+                    const minutesEl = document.getElementById('lastSongMinutesAgo');
+                    if (minutesEl) minutesEl.textContent = String(minutesAgo);
+                }
+                const stationEl = document.getElementById('lastSongStation');
+                const titleEl = document.getElementById('lastSongTitle');
+                if (stationEl) stationEl.innerHTML = `<a href="/station.php#${encodeURIComponent(last.station)}" class="text-decoration-none">${last.station || '...'}</a>`;
+                if (titleEl) titleEl.innerHTML = `<a href="/song.php#${encodeURIComponent(last.song)}" class="text-decoration-none">${last.song || '...'}</a>`;
+            } else {
+                const minutesEl = document.getElementById('lastSongMinutesAgo'); if (minutesEl) minutesEl.textContent = '...';
+                const stationEl = document.getElementById('lastSongStation'); if (stationEl) stationEl.textContent = '...';
+                const titleEl = document.getElementById('lastSongTitle'); if (titleEl) titleEl.textContent = '...';
+            }
         }
 
         // run immediately and every minute
