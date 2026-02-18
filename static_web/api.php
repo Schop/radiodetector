@@ -178,6 +178,12 @@ function chart_data() {
             $average_weekdays[$i] = 0;
         }
     }
+    // Compute average songs per hour (total songs in each hour / number of distinct dates observed)
+    $num_days = max(1, count($days_count));
+    $average_hours = array_fill(0, 24, 0);
+    for ($h = 0; $h < 24; $h++) {
+        $average_hours[$h] = $hours[$h] / $num_days;
+    }
     // Get last 14 days
     krsort($days_count);
     $sorted_days = array_slice($days_count, 0, 14, true);
@@ -196,7 +202,7 @@ function chart_data() {
         ],
         'hours' => [
             'labels' => array_map(fn($h) => sprintf('%02d:00', $h), range(0, 23)),
-            'data' => $hours
+            'data' => $average_hours
         ],
         'weekdays' => [
             'labels' => $day_names,
@@ -386,6 +392,19 @@ function station_charts($station_name) {
             $average_weekdays[$i] = 0;
         }
     }
+    // Compute average songs per hour (total songs in each hour / number of distinct dates observed)
+    $num_days = max(1, count($days_count));
+    $average_hours = array_fill(0, 24, 0);
+    for ($h = 0; $h < 24; $h++) {
+        $average_hours[$h] = $hours[$h] / $num_days;
+    }
+
+    // Compute average songs per hour (total songs in each hour / number of distinct dates observed)
+    $num_days = max(1, count($days_count));
+    $average_hours = array_fill(0, 24, 0);
+    for ($h = 0; $h < 24; $h++) {
+        $average_hours[$h] = $hours[$h] / $num_days;
+    }
     // Get last 14 days for this station
     krsort($days_count);
     $sorted_days = array_slice($days_count, 0, 14, true);
@@ -408,7 +427,7 @@ function station_charts($station_name) {
     return [
         'hours' => [
             'labels' => array_map(fn($h) => sprintf('%02d:00', $h), range(0, 23)),
-            'data' => $hours
+            'data' => $average_hours
         ],
         'weekdays' => [
             'labels' => $day_names,
@@ -602,97 +621,7 @@ function export_csv() {
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Set headers for CSV download
-    header('Content-Type: text/csv');
-    header('Content-Disposition: attachment; filename="radio_songs.csv"');
-    
-    // Output CSV
-    $output = fopen('php://output', 'w');
-    fputcsv($output, ['Station', 'Artist', 'Song', 'Detected At']);
-    foreach ($rows as $row) {
-        fputcsv($output, $row);
-    }
-    fclose($output);
-    exit;
-}
 
-function artist_data($artist_name) {
-    $pdo = get_db_connection();
-    
-    // Get all songs by artist
-    $stmt = $pdo->prepare("SELECT * FROM songs WHERE artist = ? ORDER BY timestamp DESC");
-    $stmt->execute([$artist_name]);
-    $songs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    $total_songs = count($songs);
-    
-    // Unique stations
-    $stmt = $pdo->prepare("SELECT DISTINCT station FROM songs WHERE artist = ? ORDER BY station");
-    $stmt->execute([$artist_name]);
-    $stations = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    
-    // Unique songs
-    $stmt = $pdo->prepare("SELECT DISTINCT song FROM songs WHERE artist = ? ORDER BY song");
-    $stmt->execute([$artist_name]);
-    $song_titles = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    
-    // Format songs
-    $songs_data = [];
-    foreach ($songs as $song) {
-        $ts = parse_iso_timestamp($song['timestamp']);
-        $ts_formatted = $ts ? $ts->format('d M Y at H:i') : $song['timestamp'];
-        $songs_data[] = [
-            'station' => $song['station'],
-            'artist' => $song['artist'],
-            'song' => $song['song'],
-            'timestamp' => $ts_formatted,
-            'timestamp_raw' => $song['timestamp']
-        ];
-    }
-    
-    return [
-        'artist_name' => $artist_name,
-        'total_detections' => $total_songs,
-        'stations' => $stations,
-        'song_titles' => $song_titles,
-        'songs' => $songs_data
-    ];
-}
-
-function artist_charts($artist_name) {
-    $pdo = get_db_connection();
-    
-    // Songs by hour and weekday for this artist
-    $stmt = $pdo->prepare("SELECT timestamp FROM songs WHERE artist = ?");
-    $stmt->execute([$artist_name]);
-    $songs = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    
-    $hours = array_fill(0, 24, 0);
-    $weekdays = array_fill(0, 7, 0);
-    foreach ($songs as $timestamp) {
-        $ts = parse_iso_timestamp($timestamp);
-        if ($ts) {
-            $hours[(int)$ts->format('H')] += 1;
-            $weekdays[((int)$ts->format('N')) - 1] += 1;
-        }
-    }
-    
-    // Top songs for this artist
-    $stmt = $pdo->prepare("
-        SELECT song, COUNT(*) as count
-        FROM songs
-        WHERE artist = ?
-        GROUP BY song
-        ORDER BY count DESC
-        LIMIT 10
-    ");
-    $stmt->execute([$artist_name]);
-    $top_songs = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    $day_names = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
-    
-    return [
-        'hours' => [
-            'labels' => array_map(fn($h) => sprintf('%02d:00', $h), range(0, 23)),
             'data' => $hours
         ],
         'weekdays' => [
@@ -891,22 +820,7 @@ if (preg_match('#/api\.php/api/([^/]+)(?:/(.+))?#', $request_uri, $matches)) {
                 echo json_encode(['error' => 'Invalid station endpoint']);
             }
             break;
-        case 'artist':
-            $artist_name = urldecode($action);
-            if (preg_match('#^([^/]+)(?:/(.+))?$#', $action, $sub_matches)) {
-                $artist_name = urldecode($sub_matches[1]);
-                $sub_action = $sub_matches[2] ?? '';
-                if ($sub_action === 'charts') {
-                    echo json_encode(artist_charts($artist_name));
-                } elseif ($sub_action === 'data') {
-                    echo json_encode(artist_data($artist_name));
-                } else {
-                    echo json_encode(['error' => 'Invalid artist endpoint']);
-                }
-            } else {
-                echo json_encode(['error' => 'Invalid artist endpoint']);
-            }
-            break;
+        
         case 'song':
             $song_name = urldecode($action);
             if (preg_match('#^([^/]+)(?:/(.+))?$#', $action, $sub_matches)) {
