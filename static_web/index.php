@@ -32,6 +32,7 @@
                         </div>
                         <p>Gemiddeld worden er per uur <strong id="averagePerHour">...</strong>
                            nummers van Phil Collins gedetecteerd op de Nederlandse radiozenders.</p>
+                        <p>Phil was <strong id="lastSongMinutesAgo">...</strong> minuten geleden nog te horen op <span id="lastSongStation">...</span> te horen met <span id="lastSongTitle">...</span>.</p>
                     </div>
                 </div>
             </div>
@@ -115,7 +116,7 @@
             <div class="col-md-4">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h6 class="card-title">Gemiddelde detecties per dag van de week</h6>
+                        <h6 class="card-title">Gemiddeld per dag van de week</h6>
                         <div style="height: 300px;">
                             <canvas id="weekdaysChart" width="400" height="300"></canvas>
                         </div>
@@ -125,7 +126,7 @@
             <div class="col-md-4">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h6 class="card-title">Detecties per uur van de dag</h6>
+                        <h6 class="card-title">Gemiddeld per uur van de dag</h6>
                         <div style="height: 300px;">
                             <canvas id="hoursChart" width="400" height="300"></canvas>
                         </div>
@@ -170,6 +171,8 @@
                 document.getElementById('firstTimestamp').textContent = formattedFirstDate;
                 
                 document.getElementById('todayCountnav').textContent = data.today_count || '0';
+
+                // lastSong info is updated by updateNowPlaying() to refresh every minute
 
                 // Populate largest-gap info (if available)
                 if (data.largest_gap && data.largest_gap.seconds && data.largest_gap.seconds > 0) {
@@ -409,6 +412,7 @@
 
         // Update Now Playing
         function updateNowPlaying() {
+
             fetch(`${API_BASE}/api/now-playing`)
                 .then(response => response.json())
                 .then(data => {
@@ -439,6 +443,33 @@
                             </div>
                         `;
                     }
+                })
+                .then(() => {
+                    // cache-busted request for latest index-data to update last-song info
+                    fetch(`${API_BASE}/api/index-data?_=${Date.now()}`)
+                        .then(resp => resp.json())
+                        .then(idx => {
+                            if (idx.songs && idx.songs.length > 0) {
+                                const last = idx.songs[0];
+                                const lastSongTime = new Date(last.timestamp_raw);
+                                if (!isNaN(lastSongTime.getTime())) {
+                                    const minutesAgo = Math.floor((Date.now() - lastSongTime.getTime()) / 60000);
+                                    const minutesEl = document.getElementById('lastSongMinutesAgo');
+                                    if (minutesEl) minutesEl.textContent = String(minutesAgo);
+                                }
+                                const stationEl = document.getElementById('lastSongStation');
+                                const titleEl = document.getElementById('lastSongTitle');
+                                if (stationEl) stationEl.innerHTML = `<a href="/station.php#${encodeURIComponent(last.station)}" class="text-decoration-none">${last.station || '...'}</a>`;
+                                if (titleEl) titleEl.innerHTML = `<a href="/song.php#${encodeURIComponent(last.song)}" class="text-decoration-none">${last.song || '...'}</a>`;
+                            } else {
+                                const minutesEl = document.getElementById('lastSongMinutesAgo'); if (minutesEl) minutesEl.textContent = '...';
+                                const stationEl = document.getElementById('lastSongStation'); if (stationEl) stationEl.textContent = '...';
+                                const titleEl = document.getElementById('lastSongTitle'); if (titleEl) titleEl.textContent = '...';
+                            }
+                        })
+                        .catch(err => {
+                            console.error('Failed to refresh last-song info:', err);
+                        });
                 })
                 .catch(err => {
                     console.error('Failed to load now playing:', err);
