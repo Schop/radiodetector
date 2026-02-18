@@ -621,18 +621,17 @@ function export_csv() {
     $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     // Set headers for CSV download
-
-            'data' => $hours
-        ],
-        'weekdays' => [
-            'labels' => $day_names,
-            'data' => $weekdays
-        ],
-        'top_songs' => [
-            'labels' => array_column($top_songs, 'song'),
-            'data' => array_column($top_songs, 'count')
-        ]
-    ];
+    header('Content-Type: text/csv');
+    header('Content-Disposition: attachment; filename="radio_songs.csv"');
+    
+    // Output CSV
+    $output = fopen('php://output', 'w');
+    fputcsv($output, ['Station', 'Artist', 'Song', 'Detected At']);
+    foreach ($rows as $row) {
+        fputcsv($output, $row);
+    }
+    fclose($output);
+    exit;
 }
 
 function song_data($song_name) {
