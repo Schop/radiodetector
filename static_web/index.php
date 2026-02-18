@@ -32,7 +32,7 @@
                         </div>
                         <p>Gemiddeld worden er per uur <strong id="averagePerHour">...</strong>
                            nummers van Phil Collins gedetecteerd op de Nederlandse radiozenders.</p>
-                        <p>Phil was <strong id="lastSongMinutesAgo">...</strong> minuten geleden voor het laatst op de radio te horen, bij <span id="lastSongStation">...</span> met het nummer <span id="lastSongTitle">...</span>.</p>
+                        <p>Phil was <strong id="lastSongMinutesAgo">...</strong> minuten geleden voor het laatst bij <span id="lastSongStation">...</span> te horen met het nummer <span id="lastSongTitle">...</span>.</p>
                     </div>
                 </div>
             </div>
@@ -53,11 +53,11 @@
                            op <strong id="uniqueStations">...</strong> verschillende radiozenders,
                            met <strong id="uniqueSongs">...</strong> verschillende nummers.
                         </p>
-                        <p>Op de dag met de meeste detecties (<strong id="mostSongsDay">...</strong>)
+                        <p>Op de dag met de meeste detecties (<span id="mostSongsDay">...</span>)
                            werden <strong id="mostSongsCount">...</strong> nummers van Phil gedetecteerd.
                         </p>
                         <hr>
-                        <p>De langste onderbreking tussen detecties was <strong id="largestGap">...</strong>. Aan deze periode van rust kwam een einde toen <strong id="largestGapEndStation">...</strong>
+                        <p>De langste onderbreking tussen detecties was <strong id="largestGap">...</strong>. Aan deze periode van rust kwam een einde toen <span id="largestGapEndStation">...</span>
                            het nummer <span id="largestGapEndSong">...</span>
                             draaide op <span id="largestGapEndTime">...</span>.</p>
                     </div>
@@ -126,7 +126,7 @@
             <div class="col-md-4">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h6 class="card-title">Detecties per uur van de dag</h6>
+                        <h6 class="card-title">Gemiddelde detecties per uur van de dag</h6>
                         <div style="height: 300px;">
                             <canvas id="hoursChart" width="400" height="300"></canvas>
                         </div>
@@ -157,7 +157,7 @@
                 document.getElementById('totalCount').textContent = data.total_count;
                 document.getElementById('uniqueStations').textContent = data.stations.length;
                 document.getElementById('uniqueSongs').textContent = data.song_titles.length;
-                document.getElementById('mostSongsDay').textContent = data.most_songs_day ? data.most_songs_day.day : '...';
+                document.getElementById('mostSongsDay').innerHTML = data.most_songs_day && data.most_songs_day.day_iso ? `<a href="/day.php?date=${encodeURIComponent(data.most_songs_day.day_iso)}" class="text-decoration-none">${data.most_songs_day.day}</a>` : (data.most_songs_day ? data.most_songs_day.day : '...');
                 document.getElementById('mostSongsCount').textContent = data.most_songs_day ? data.most_songs_day.count : '...';
                 document.getElementById('averagePerHour').textContent = data.average_per_hour !== null ? data.average_per_hour : '...';
                 
@@ -189,7 +189,7 @@
                     } else {
                         songEl.textContent = '...';
                     }
-                    document.getElementById('largestGapEndTime').textContent = `${gapDateStr}` || '...';
+                    document.getElementById('largestGapEndTime').innerHTML = lg.date ? `<a href="/day.php?date=${encodeURIComponent(lg.date)}" class="text-decoration-none">${gapDateStr}</a>` : '...';
                 } else {
                     document.getElementById('largestGap').textContent = 'Geen gegevens';
                     document.getElementById('largestGapEndStation').textContent = '...';
@@ -212,20 +212,16 @@
                         <table class="table table-sm table-borderless mb-0">
                             <tbody>
                                 ${recentSongs.map(song => {
-                                    // Format timestamp more compactly: "12 Feb, 21:12"
+                                    // Format timestamp more compactly: date + time
                                     const ts = new Date(song.timestamp_raw);
-                                    const compactTime = ts.toLocaleDateString('nl-NL', { 
-                                        day: 'numeric', 
-                                        month: 'short' 
-                                    }) + ', ' + ts.toLocaleTimeString('nl-NL', { 
-                                        hour: '2-digit', 
-                                        minute: '2-digit',
-                                        hour12: false 
-                                    });
+                                    const compactDate = ts.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' });
+                                    const compactTime = ts.toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit', hour12: false });
+                                    const isoDate = (song.timestamp_raw && song.timestamp_raw.split('T')[0]) || '';
+                                    const dayHref = '/day.php?date=' + encodeURIComponent(isoDate);
                                     return `
                                     <tr style="border-bottom: 1px solid #dee2e6;">
                                         <td class="p-1" style="white-space: nowrap;">
-                                            <small class="text-muted">${compactTime}</small>
+                                            <small><a href="${dayHref}" class="text-decoration-none">${compactDate}</a>, ${compactTime}</small>
                                         </td>
                                         <td class="p-1">
                                             <small>
@@ -263,7 +259,20 @@
                                     responsive: true,
                                     maintainAspectRatio: false,
                                     scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-                                    plugins: { legend: { display: false } }
+                                    plugins: { legend: { display: false } },
+                                    onHover: (event, elements) => {
+                                        event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+                                    },
+                                    onClick: (event, elements) => {
+                                        // Use the index of the clicked point to find the ISO date from the API response
+                                        if (elements.length > 0 && chartData.timeline && chartData.timeline.dates) {
+                                            const idx = elements[0].index;
+                                            const isoDate = chartData.timeline.dates[idx];
+                                            if (isoDate) {
+                                                window.location.href = `/day.php?date=${encodeURIComponent(isoDate)}`;
+                                            }
+                                        }
+                                    }
                                 }
                             });
 
@@ -467,7 +476,7 @@
                     document.getElementById('totalCount').textContent = data.total_count;
                     document.getElementById('uniqueStations').textContent = data.stations.length;
                     document.getElementById('uniqueSongs').textContent = data.song_titles.length;
-                    document.getElementById('mostSongsDay').textContent = data.most_songs_day ? data.most_songs_day.day : '...';
+                    document.getElementById('mostSongsDay').innerHTML = data.most_songs_day && data.most_songs_day.day_iso ? `<a href="/day.php?date=${encodeURIComponent(data.most_songs_day.day_iso)}" class="text-decoration-none">${data.most_songs_day.day}</a>` : (data.most_songs_day ? data.most_songs_day.day : '...');
                     document.getElementById('mostSongsCount').textContent = data.most_songs_day ? data.most_songs_day.count : '...';
                     document.getElementById('averagePerHour').textContent = data.average_per_hour !== null ? data.average_per_hour : '...';
                     
@@ -499,7 +508,7 @@
                         } else {
                             songEl2.textContent = '...';
                         }
-                        document.getElementById('largestGapEndTime').textContent = gapDateStr || '...';
+                        document.getElementById('largestGapEndTime').innerHTML = lg.date ? `<a href="/day.php?date=${encodeURIComponent(lg.date)}" class="text-decoration-none">${gapDateStr}</a>` : '...';
                     } else {
                         document.getElementById('largestGap').textContent = 'Geen gegevens';
                         document.getElementById('largestGapEndStation').textContent = '...';
@@ -525,18 +534,21 @@
                                 <tbody>
                                     ${recentSongs.map(song => {
                                         const ts = new Date(song.timestamp_raw);
-                                        const compactTime = ts.toLocaleDateString('nl-NL', { 
-                                            day: 'numeric', 
-                                            month: 'short' 
-                                        }) + ', ' + ts.toLocaleTimeString('nl-NL', { 
+                                        const compactTime = ts.toLocaleTimeString('nl-NL', { 
                                             hour: '2-digit', 
                                             minute: '2-digit',
                                             hour12: false 
                                         });
+                                        const compactDate = ts.toLocaleDateString('nl-NL', { 
+                                            day: 'numeric', 
+                                            month: 'short',  
+                                        });
+                                        const isoDate = (song.timestamp_raw && song.timestamp_raw.split('T')[0]) || '';
+                                        const dayHref = '/day.php?date=' + encodeURIComponent(isoDate);
                                         return `
                                         <tr style="border-bottom: 1px solid #dee2e6;">
                                             <td class="p-1" style="white-space: nowrap;">
-                                                <small class="text-muted">${compactTime}</small>
+                                                <small><a href="${dayHref}" class="text-decoration-none">${compactDate}</a>, ${compactTime}</small>
                                             </td>
                                             <td class="p-1">
                                                 <small>

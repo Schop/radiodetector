@@ -213,7 +213,9 @@ function chart_data() {
                 $dt = DateTime::createFromFormat('Y-m-d', $d);
                 return $dt ? strtolower($dt->format('j M')) : $d;
             }, array_keys($sorted_days)),
-            'data' => array_values($sorted_days)
+            'data' => array_values($sorted_days),
+            // raw ISO dates (index-aligned with labels) — useful for linking from charts
+            'dates' => array_keys($sorted_days)
         ]
     ];
 }
@@ -580,7 +582,10 @@ function index_data() {
     $most_songs_day = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($most_songs_day && isset($most_songs_day['day'])) {
-        $date = new DateTime($most_songs_day['day']);
+        // keep ISO date for links and add a human-friendly label for display
+        $iso = $most_songs_day['day'];
+        $date = new DateTime($iso);
+        $most_songs_day['day_iso'] = $iso;
         $most_songs_day['day'] = $date->format('d M Y');
     }
 
@@ -784,6 +789,102 @@ function song_charts($song_name) {
     ];
 }
 
+
+function day_data($date) {
+    $pdo = get_db_connection();
+
+    // validate date (YYYY-MM-DD)
+    $dt = DateTime::createFromFormat('Y-m-d', $date);
+    if (!$dt || $dt->format('Y-m-d') !== $date) {
+        return ['error' => 'invalid date format'];
+    }
+
+    // All detections for that date
+    $stmt = $pdo->prepare("SELECT * FROM songs WHERE DATE(timestamp) = ? ORDER BY timestamp DESC");
+    $stmt->execute([$date]);
+    $songs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $total = count($songs);
+
+    // Unique stations and song titles for the date
+    $stmt = $pdo->prepare("SELECT DISTINCT station FROM songs WHERE DATE(timestamp) = ? ORDER BY station");
+    $stmt->execute([$date]);
+    $stations = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    $stmt = $pdo->prepare("SELECT DISTINCT song FROM songs WHERE DATE(timestamp) = ? ORDER BY song");
+    $stmt->execute([$date]);
+    $song_titles = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    // Top songs and stations for the date
+    $stmt = $pdo->prepare("SELECT song, COUNT(*) as count FROM songs WHERE DATE(timestamp) = ? GROUP BY song ORDER BY count DESC LIMIT 5");
+    $stmt->execute([$date]);
+    $top_songs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $stmt = $pdo->prepare("SELECT station, COUNT(*) as count FROM songs WHERE DATE(timestamp) = ? GROUP BY station ORDER BY count DESC LIMIT 5");
+    $stmt->execute([$date]);
+    $top_stations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Format songs for output
+    $songs_data = [];
+    foreach ($songs as $song) {
+        $ts = parse_iso_timestamp($song['timestamp']);
+        $ts_formatted = $ts ? $ts->format('d M Y at H:i') : $song['timestamp'];
+        $songs_data[] = [
+            'station' => $song['station'],
+            'artist' => $song['artist'],
+            'song' => $song['song'],
+            'timestamp' => $ts_formatted,
+            'timestamp_raw' => $song['timestamp']
+        ];
+    }
+
+    return [
+        'date' => $date,
+        'total_count' => $total,
+        'stations' => $stations,
+        'song_titles' => $song_titles,
+        'top_songs' => [ 'labels' => array_column($top_songs, 'song'), 'data' => array_column($top_songs, 'count') ],
+        'top_stations' => [ 'labels' => array_column($top_stations, 'station'), 'data' => array_column($top_stations, 'count') ],
+        'songs' => $songs_data
+    ];
+}
+
+function day_charts($date) {
+    $pdo = get_db_connection();
+
+    // validate date
+    $dt = DateTime::createFromFormat('Y-m-d', $date);
+    if (!$dt || $dt->format('Y-m-d') !== $date) {
+        return ['error' => 'invalid date format'];
+    }
+
+    // per-hour distribution for the date
+    $stmt = $pdo->prepare("SELECT timestamp FROM songs WHERE DATE(timestamp) = ?");
+    $stmt->execute([$date]);
+    $rows = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    $hours = array_fill(0, 24, 0);
+    foreach ($rows as $ts_str) {
+        $ts = parse_iso_timestamp($ts_str);
+        if ($ts) $hours[(int)$ts->format('H')] += 1;
+    }
+
+    // Top songs and stations (already limited in day_data but repeat here for charts)
+    $stmt = $pdo->prepare("SELECT song, COUNT(*) as count FROM songs WHERE DATE(timestamp) = ? GROUP BY song ORDER BY count DESC LIMIT 5");
+    $stmt->execute([$date]);
+    $top_songs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $stmt = $pdo->prepare("SELECT station, COUNT(*) as count FROM songs WHERE DATE(timestamp) = ? GROUP BY station ORDER BY count DESC LIMIT 5");
+    $stmt->execute([$date]);
+    $top_stations = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    return [
+        'hours' => [ 'labels' => array_map(fn($h) => sprintf('%02d:00', $h), range(0,23)), 'data' => $hours ],
+        'songs' => [ 'labels' => array_column($top_songs, 'song'), 'data' => array_column($top_songs, 'count') ],
+        'stations' => [ 'labels' => array_column($top_stations, 'station'), 'data' => array_column($top_stations, 'count') ]
+    ];
+}
+
 // Route handling
 $request_uri = $_SERVER['REQUEST_URI'] ?? '';
 if (preg_match('#/api\.php/api/([^/]+)(?:/(.+))?#', $request_uri, $matches)) {
@@ -834,6 +935,24 @@ if (preg_match('#/api\.php/api/([^/]+)(?:/(.+))?#', $request_uri, $matches)) {
                 }
             } else {
                 echo json_encode(['error' => 'Invalid song endpoint']);
+            }
+            break;
+
+        case 'day':
+            // action expected: YYYY-MM-DD or YYYY-MM-DD/charts|data
+            $day_param = urldecode($action);
+            if (preg_match('#^(\d{4}-\d{2}-\d{2})(?:/(.+))?$#', $action, $sub_matches)) {
+                $day_date = $sub_matches[1];
+                $sub_action = $sub_matches[2] ?? '';
+                if ($sub_action === 'charts') {
+                    echo json_encode(day_charts($day_date));
+                } elseif ($sub_action === 'data') {
+                    echo json_encode(day_data($day_date));
+                } else {
+                    echo json_encode(day_data($day_date));
+                }
+            } else {
+                echo json_encode(['error' => 'Invalid day endpoint']);
             }
             break;
         default:

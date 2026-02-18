@@ -125,20 +125,24 @@
                         <table class="table table-sm table-borderless mb-0">
                             <tbody>
                                 ${recentSongs.map(song => {
-                                    // Format timestamp more compactly: "12 Feb, 21:12"
+                                    // Format timestamp more compactly: date + time
                                     const ts = new Date(song.timestamp_raw);
-                                    const compactTime = ts.toLocaleDateString('nl-NL', { 
-                                        day: 'numeric', 
-                                        month: 'short' 
-                                    }) + ', ' + ts.toLocaleTimeString('nl-NL', { 
-                                        hour: '2-digit', 
-                                        minute: '2-digit',
-                                        hour12: false 
-                                    });
+
+                                        const compactTime = ts.toLocaleTimeString('nl-NL', { 
+                                            hour: '2-digit', 
+                                            minute: '2-digit',
+                                            hour12: false 
+                                        });
+                                        const compactDate = ts.toLocaleDateString('nl-NL', { 
+                                            day: 'numeric', 
+                                            month: 'short',  
+                                        });
+                                    const isoDate = (song.timestamp_raw && song.timestamp_raw.split('T')[0]) || '';
+                                    const dayHref = '/day.php?date=' + encodeURIComponent(isoDate);
                                     return `
                                     <tr>
                                         <td class="p-1">
-                                            <small class="text-muted" style="white-space: nowrap;">${compactTime}</small>
+                                            <small class="text-muted" style="white-space: nowrap;"><a href="${dayHref}" class="text-decoration-none">${compactDate}</a>, ${compactTime}</small>
                                         </td>
                                         <td class="p-1">
                                             <small>
