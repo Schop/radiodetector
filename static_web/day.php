@@ -81,13 +81,21 @@
             } catch (e) { return iso; }
         }
 
+        function formatTitleDateDisplay(iso) {
+            try {
+                const dt = new Date(iso + 'T00:00:00');
+                return dt.toLocaleDateString('nl-NL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            } catch (e) { return iso; }
+        }
+
         if (!dateParam) {
             document.getElementById('dayTitle').textContent = 'Datum niet opgegeven';
             document.getElementById('recentDetectionsContainer').innerHTML = '<div class="text-center text-muted py-3"><small>Geen datum opgegeven</small></div>';
         } else {
             const isoDate = dateParam;
-            const normalDate = formatDateDisplay(isoDate)
-            document.getElementById('dayTitle').textContent = `Detecties op ${normalDate}`;
+            const normalDate = formatDateDisplay(isoDate);
+            const titleDate = formatTitleDateDisplay(isoDate);
+            document.getElementById('dayTitle').textContent = `${titleDate}`;
             document.getElementById('displayDate').textContent = normalDate;
             document.getElementById('topStationsDate').textContent = normalDate;
             document.getElementById('topSongsDate').textContent = normalDate;

@@ -32,7 +32,7 @@
                         </div>
                         <p>Gemiddeld worden er per uur <strong id="averagePerHour">...</strong>
                            nummers van Phil Collins gedetecteerd op de Nederlandse radiozenders.</p>
-                        <p>Phil was <strong id="lastSongMinutesAgo">...</strong> minuten geleden voor het laatst bij <span id="lastSongStation">...</span> te horen met het nummer <span id="lastSongTitle">...</span>.</p>
+                        <p>Phil was <strong id="lastSongMinutesAgo">...</strong> minuten geleden nog op de radio bij <span id="lastSongStation">...</span> met het nummer <span id="lastSongTitle">...</span>.</p>
                     </div>
                 </div>
             </div>
