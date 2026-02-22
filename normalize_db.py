@@ -32,6 +32,8 @@ def normalize_song_title(title):
     
     return ' '.join(words)
 
+CANONICAL_BAILEY = "Phil Collins & Philip Bailey"
+
 def normalize_database():
     """Normalize all artist and song entries in the database"""
     conn, db_type = db.get_connection()
@@ -51,6 +53,12 @@ def normalize_database():
         # Normalize
         normalized_artist = normalize_song_title(artist)
         normalized_song = normalize_song_title(song)
+        
+        # Special-case: anything mentioning Bailey should be collapsed to the
+        # canonical duet form.  This covers the various spellings/ordering
+        # combinations that have crept in over time.
+        if 'bailey' in artist.lower():
+            normalized_artist = CANONICAL_BAILEY
         
         # Check if anything changed
         if artist != normalized_artist or song != normalized_song:
