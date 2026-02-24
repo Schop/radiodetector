@@ -240,26 +240,45 @@
                     fetch(`${API_BASE}/api/chart-data`)
                         .then(response => response.json())
                         .then(chartData => {
-                            // Timeline chart
+                            // Calculate average for the timeline data
+                            const timelineData = chartData.timeline.data;
+                            const avg = timelineData.reduce((a, b) => a + b, 0) / (timelineData.length || 1);
+                            const avgArray = Array(timelineData.length).fill(avg);
+
+                            // Timeline chart with average line
                             new Chart(document.getElementById('timelineChart'), {
                                 type: 'line',
                                 data: {
                                     labels: chartData.timeline.labels,
-                                    datasets: [{
-                                        label: 'Dagelijkse Detecties',
-                                        data: chartData.timeline.data,
-                                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                                        borderColor: 'rgba(54, 162, 235, 1)',
-                                        borderWidth: 2,
-                                        fill: true,
-                                        tension: 0.3
-                                    }]
+                                    datasets: [
+                                        {
+                                            label: 'Dagelijkse Detecties',
+                                            data: timelineData,
+                                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                            borderColor: 'rgba(54, 162, 235, 1)',
+                                            borderWidth: 2,
+                                            fill: true,
+                                            tension: 0.3
+                                        },
+                                        {
+                                            label: 'Gemiddelde',
+                                            data: avgArray,
+                                            borderColor: 'rgba(255, 99, 132, 0.8)',
+                                            borderWidth: 2,
+                                            borderDash: [8, 6],
+                                            pointRadius: 0,
+                                            fill: false,
+                                            tension: 0,
+                                            type: 'line',
+                                            order: 1
+                                        }
+                                    ]
                                 },
                                 options: {
                                     responsive: true,
                                     maintainAspectRatio: false,
                                     scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-                                    plugins: { legend: { display: false } },
+                                    plugins: { legend: { display: true } },
                                     onHover: (event, elements) => {
                                         event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
                                     },

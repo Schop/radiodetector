@@ -650,7 +650,7 @@ def main():
                             try:
                                 # Try posting to Bluesky (non-fatal)
                                 try:
-                                    bluesky_post.post_song(normalized_artist, normalized_song, station=station)
+                                    #bluesky_post.post_song(normalized_artist, normalized_song, station=station)
                                     log_print('Posted detection to Bluesky', Fore.GREEN)
                                 except Exception as e:
                                     log_print(f'Could not post to Bluesky: {e}', Fore.YELLOW)

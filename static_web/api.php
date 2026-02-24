@@ -148,20 +148,30 @@ function chart_data() {
     $days_of_week = array_fill(0, 7, 0);
     $days_count = [];
     
+    $today_iso = (new DateTime())->format('Y-m-d');
     foreach ($all_songs as $timestamp) {
         $ts = parse_iso_timestamp($timestamp);
         if ($ts) {
             $hour = (int)$ts->format('H');
-            $weekday = ((int)$ts->format('N')) - 1;
-            $hours[$hour] += 1;
-            $days_of_week[$weekday] += 1;
             $date_key = $ts->format('Y-m-d');
+            $hours[$hour] += 1;
             $days_count[$date_key] = ($days_count[$date_key] ?? 0) + 1;
+        }
+    }
+    // Recalculate days_of_week, excluding today
+    $days_of_week = array_fill(0, 7, 0);
+    foreach ($days_count as $date_key => $count) {
+        if ($date_key === $today_iso) continue; // Exclude today
+        $dt = DateTime::createFromFormat('Y-m-d', $date_key);
+        if ($dt) {
+            $weekday = ((int)$dt->format('N')) - 1;
+            $days_of_week[$weekday] += $count;
         }
     }
     // Count how many distinct dates we have for each weekday so we can compute averages
     $distinct_dates_per_weekday = array_fill(0, 7, 0);
     foreach (array_keys($days_count) as $date_key) {
+        if ($date_key === $today_iso) continue; // Exclude today
         $dt = DateTime::createFromFormat('Y-m-d', $date_key);
         if ($dt) {
             $wd = ((int)$dt->format('N')) - 1;
@@ -407,10 +417,15 @@ function station_charts($station_name) {
     for ($h = 0; $h < 24; $h++) {
         $average_hours[$h] = $hours[$h] / $num_days;
     }
-    // Get last 14 days for this station
-    krsort($days_count);
-    $sorted_days = array_slice($days_count, 0, 14, true);
-    ksort($sorted_days);
+    // Build last 14 days (including today) with zero fill for missing days
+    $sorted_days = [];
+    $today = new DateTime();
+    for ($i = 13; $i >= 0; $i--) {
+        $date = clone $today;
+        $date->modify("-{$i} days");
+        $date_key = $date->format('Y-m-d');
+        $sorted_days[$date_key] = isset($days_count[$date_key]) ? $days_count[$date_key] : 0;
+    }
     
     // Top songs for this station
     $stmt = $pdo->prepare("
@@ -747,10 +762,15 @@ function song_charts($song_name) {
             $average_weekdays[$i] = 0;
         }
     }
-    // Get last 14 days for this song
-    krsort($days_count);
-    $sorted_days = array_slice($days_count, 0, 14, true);
-    ksort($sorted_days);
+    // Build last 14 days (including today) with zero fill for missing days
+    $sorted_days = [];
+    $today = new DateTime();
+    for ($i = 13; $i >= 0; $i--) {
+        $date = clone $today;
+        $date->modify("-{$i} days");
+        $date_key = $date->format('Y-m-d');
+        $sorted_days[$date_key] = isset($days_count[$date_key]) ? $days_count[$date_key] : 0;
+    }
     
     // Stations that play this song
     $stmt = $pdo->prepare("
@@ -869,6 +889,26 @@ function day_charts($date) {
         if ($ts) $hours[(int)$ts->format('H')] += 1;
     }
 
+    // --- Compute average per-hour distribution across all days ---
+    $stmt = $pdo->query("SELECT timestamp FROM songs");
+    $all_rows = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $all_hours = array_fill(0, 24, 0);
+    $all_days_count = [];
+    foreach ($all_rows as $ts_str) {
+        $ts = parse_iso_timestamp($ts_str);
+        if ($ts) {
+            $h = (int)$ts->format('H');
+            $all_hours[$h] += 1;
+            $date_key = $ts->format('Y-m-d');
+            if (!isset($all_days_count[$date_key])) $all_days_count[$date_key] = 1;
+        }
+    }
+    $num_days = max(1, count($all_days_count));
+    $average_hours = array_fill(0, 24, 0);
+    for ($h = 0; $h < 24; $h++) {
+        $average_hours[$h] = $all_hours[$h] / $num_days;
+    }
+
     // Top songs and stations (already limited in day_data but repeat here for charts)
     $stmt = $pdo->prepare("SELECT song, COUNT(*) as count FROM songs WHERE DATE(timestamp) = ? GROUP BY song ORDER BY count DESC LIMIT 5");
     $stmt->execute([$date]);
@@ -878,8 +918,22 @@ function day_charts($date) {
     $stmt->execute([$date]);
     $top_stations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // If the requested date is today, set hours after the current hour to null, but keep 24 points for both arrays
+    $today_iso = (new DateTime())->format('Y-m-d');
+    $labels = array_map(fn($h) => sprintf('%02d:00', $h), range(0,23));
+    if ($date === $today_iso) {
+        $current_hour = (int)(new DateTime())->format('G'); // 0-23, current hour
+        for ($h = $current_hour + 1; $h < 24; $h++) {
+            $hours[$h] = null;
+        }
+    }
+
     return [
-        'hours' => [ 'labels' => array_map(fn($h) => sprintf('%02d:00', $h), range(0,23)), 'data' => $hours ],
+        'hours' => [
+            'labels' => $labels,
+            'data' => $hours,
+            'average' => $average_hours
+        ],
         'songs' => [ 'labels' => array_column($top_songs, 'song'), 'data' => array_column($top_songs, 'count') ],
         'stations' => [ 'labels' => array_column($top_stations, 'station'), 'data' => array_column($top_stations, 'count') ]
     ];

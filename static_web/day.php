@@ -6,8 +6,12 @@
         <main>
             <?php include 'includes/nav.html'; ?>
 
-            <h1 id="dayTitle">Loading...</h1>
-            <h5 class="text-muted mb-4" id="daySubtitle">Details van detecties op deze dag</h5>
+                <div class="d-flex align-items-center mb-2" style="height: 2.5em;">
+                    <a href="#" id="prevDayLink" class="btn btn-outline-primary btn-sm me-3" style="display: none;">&larr; Vorige dag</a>
+                    <h1 id="dayTitle" class="mb-0">Loading...</h1>
+                    <a href="#" id="nextDayLink" class="btn btn-outline-primary btn-sm ms-3" style="display: none;">Volgende dag &rarr;</a>
+                </div>
+                <h5 class="text-muted mb-4" id="daySubtitle">Details van detecties op deze dag</h5>
 
             <div class="row mb-4">
                 <div class="col-md-4">
@@ -91,6 +95,8 @@
         if (!dateParam) {
             document.getElementById('dayTitle').textContent = 'Datum niet opgegeven';
             document.getElementById('recentDetectionsContainer').innerHTML = '<div class="text-center text-muted py-3"><small>Geen datum opgegeven</small></div>';
+                document.getElementById('prevDayLink').style.display = 'none';
+                document.getElementById('nextDayLink').style.display = 'none';
         } else {
             const isoDate = dateParam;
             const normalDate = formatDateDisplay(isoDate);
@@ -101,6 +107,27 @@
             document.getElementById('topSongsDate').textContent = normalDate;
             document.title = document.title.replace('{date}', normalDate);
             document.getElementById('recentForDate').textContent = normalDate;
+                // Calculate previous and next day
+                const dt = new Date(isoDate + 'T00:00:00');
+                const prev = new Date(dt);
+                prev.setDate(dt.getDate() - 1);
+                const next = new Date(dt);
+                next.setDate(dt.getDate() + 1);
+                // Format YYYY-MM-DD
+                function pad(n) { return String(n).padStart(2, '0'); }
+                function toIso(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+                // Set links
+                document.getElementById('prevDayLink').href = `?date=${toIso(prev)}`;
+                document.getElementById('prevDayLink').style.display = '';
+                // Hide 'Volgende dag' if next day is today or after
+                const today = new Date();
+                const todayIso = `${today.getFullYear()}-${pad(today.getMonth()+1)}-${pad(today.getDate())}`;
+                if (toIso(next) > todayIso) {
+                    document.getElementById('nextDayLink').style.display = 'none';
+                } else {
+                    document.getElementById('nextDayLink').href = `?date=${toIso(next)}`;
+                    document.getElementById('nextDayLink').style.display = '';
+                }
 
             // Fetch day data
             fetch(`${API_BASE}/api/day/${encodeURIComponent(isoDate)}/data`)
@@ -158,30 +185,64 @@
                         options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
                     });
 
-                    // Cumulative buildup (line) — replaces the hourly bar chart
+                    // Cumulative buildup (line) — now with average overlay
                     const hourLabels = data.hours.labels || Array.from({length:24}, (_,i) => `${String(i).padStart(2,'0')}:00`);
                     const hourCounts = (data.hours.data || []).map(v => Number(v || 0));
 
+                    // Compute cumulative for this day, respecting nulls (for today, hours after current hour are null)
                     const cumulative = [];
                     let running = 0;
                     for (let i = 0; i < hourCounts.length; i++) {
-                        running += hourCounts[i];
-                        cumulative.push(running);
+                        // If the original data is null, keep cumulative as null
+                        if (data.hours.data && data.hours.data[i] === null) {
+                            cumulative.push(null);
+                        } else {
+                            running += hourCounts[i];
+                            cumulative.push(running);
+                        }
+                    }
+
+                    // Compute average cumulative if available
+                    let avgCumulative = null;
+                    if (data.hours.average) {
+                        const avgCounts = (data.hours.average || []).map(v => Number(v || 0));
+                        avgCumulative = [];
+                        let avgRunning = 0;
+                        for (let i = 0; i < avgCounts.length; i++) {
+                            avgRunning += avgCounts[i];
+                            avgCumulative.push(avgRunning);
+                        }
+                    }
+
+                    const datasets = [
+                        {
+                            label: 'Cumulatief aantal detecties',
+                            data: cumulative,
+                            backgroundColor: 'rgba(54,162,235,0.12)',
+                            borderColor: 'rgba(54,162,235,1)',
+                            pointRadius: cumulative.map(v => v === null ? 0 : 3),
+                            fill: true,
+                            tension: 0.25
+                        }
+                    ];
+                    if (avgCumulative) {
+                        datasets.push({
+                            label: 'Gemiddelde dag (cumulatief)',
+                            data: avgCumulative,
+                            backgroundColor: 'rgba(255,206,86,0.10)',
+                            borderColor: 'rgb(255, 86, 86)',
+                            pointRadius: 0,
+                            fill: false,
+                            borderDash: [6, 4],
+                            tension: 0.25
+                        });
                     }
 
                     new Chart(document.getElementById('hoursChart'), {
                         type: 'line',
                         data: {
                             labels: hourLabels,
-                            datasets: [{
-                                label: 'Cumulatief aantal detecties',
-                                data: cumulative,
-                                backgroundColor: 'rgba(54,162,235,0.12)',
-                                borderColor: 'rgba(54,162,235,1)',
-                                pointRadius: 3,
-                                fill: true,
-                                tension: 0.25
-                            }]
+                            datasets: datasets
                         },
                         options: {
                             responsive: true,
@@ -191,10 +252,10 @@
                                 x: { ticks: { maxRotation: 45, minRotation: 30 } }
                             },
                             plugins: {
-                                legend: { display: false },
+                                legend: { display: true },
                                 tooltip: {
                                     callbacks: {
-                                        label: ctx => `${ctx.parsed.y} totaal`
+                                        label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y} totaal`
                                     }
                                 }
                             }
