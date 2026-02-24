@@ -606,36 +606,39 @@ def main():
             # Process each station
             for station in sorted(stations_data.keys()):
                 artist, song, source = stations_data[station]
-                
+
                 if song and artist:
+                    # Normalize artist if 'bailey' is present
+                    if 'bailey' in artist.lower():
+                        artist = "Phil Collins & Philip Bailey"
                     # Normalize song title (remove patterns like "#742: ")
                     normalized_song = normalize_song_title(song)
                     normalized_artist = normalize_song_title(artist)
                     normalized_song_info = f"{normalized_artist} - {normalized_song}"
-                    
+
                     # Create a unique key to detect if this is the same song (handles ordering issues)
                     song_key = create_song_key(artist, song)
-                    
+
                     # Check if this is different from last known song (using song key)
                     if station not in last_songs or last_songs[station] != song_key:
                         ts = get_timestamp()
                         last_songs[station] = song_key
                         songs_changed += 1
-                        
+
                         # Check if artist is in target list
                         matched = False
                         for target_artist in TARGET_ARTISTS:
                             if target_artist and target_artist.lower() in normalized_artist.lower():
                                 matched = True
                                 break
-                        
+
                         # Check if song is in target list (using normalized song title)
                         if not matched:
                             for target_song in TARGET_SONGS:
                                 if target_song and target_song.lower() in normalized_song.lower():
                                     matched = True
                                     break
-                        
+
                         # Log to database and print if matched
                         if matched:
                             # Log to database (store normalized song title)
@@ -664,11 +667,10 @@ def main():
                                     log_print(f"⚠️ Database upload failed: {result.stderr.strip()}", Fore.YELLOW)
                             except Exception as e:
                                 log_print(f"⚠️ Database upload error: {e}", Fore.YELLOW)
-                            
+
                             # Beep to alert user (works on Windows and Linux)
                             print('\a', end='', flush=True)
-                            
-                            
+
                         else:
                             # Print normally for non-matching songs
                             log_print(f"[{ts}] [{station}] [{source}] {normalized_song_info}")

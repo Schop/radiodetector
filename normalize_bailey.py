@@ -46,6 +46,9 @@ def normalize_bailey():
         print(f"Completed – {count} row(s) updated.")
 
     conn.close()
+        # Normalize 'bailey' in artist
+        if 'bailey' in artist.lower():
+            artist = "Phil Collins & Philip Bailey"
 
 
 if __name__ == '__main__':
