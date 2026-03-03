@@ -21,8 +21,8 @@ from datetime import datetime
 
 # Replace these placeholder values before publishing or running on your Pi.
 # Do NOT commit real credentials to version control.
-DEFAULT_IDENTIFIER = 'john.schop@gmx.com'
-DEFAULT_PASSWORD = 'nrdo-4fhd-fz6k-m75n'
+DEFAULT_IDENTIFIER = 'your identifier here (e.g. email or handle)'
+DEFAULT_PASSWORD = 'your password here'
 
 
 class BlueskyPoster:
