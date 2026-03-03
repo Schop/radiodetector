@@ -608,9 +608,7 @@ def main():
                 artist, song, source = stations_data[station]
 
                 if song and artist:
-                    # Normalize artist if 'bailey' is present
-                    if 'bailey' in artist.lower():
-                        artist = "Phil Collins & Philip Bailey"
+                    
                     # Normalize song title (remove patterns like "#742: ")
                     normalized_song = normalize_song_title(song)
                     normalized_artist = normalize_song_title(artist)
@@ -628,7 +626,15 @@ def main():
                         # Check if artist is in target list
                         matched = False
                         for target_artist in TARGET_ARTISTS:
-                            if target_artist and target_artist.lower() in normalized_artist.lower():
+                            if target_artist == "Phil Collins" and target_artist.lower() in normalized_artist.lower():
+                                matched = True
+                                # Normalize artist if 'bailey' is present
+                                if 'bailey' in normalized_artist.lower():
+                                    normalized_artist = "Phil Collins & Philip Bailey"
+                                else:
+                                    normalized_artist = "Phil Collins"
+                                break
+                            if target_artist == "Genesis" and target_artist.lower() == normalized_artist.lower():
                                 matched = True
                                 break
 

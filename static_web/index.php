@@ -197,8 +197,17 @@
                     document.getElementById('largestGapEndTime').textContent = '...';
                 }
 
-                const lastSongMinutesAgo = data.songs && data.songs.length > 0 ? Math.round((Date.now() - new Date(data.songs[0].timestamp_raw).getTime()) / 60000) : null;
-                document.getElementById('lastSongMinutesAgo').textContent = lastSongMinutesAgo !== null ? lastSongMinutesAgo : '...';
+                const lastSongMinutesAgoEl = document.getElementById('lastSongMinutesAgo');
+                let lastSongMinutesAgo = null;
+                if (data.songs && data.songs.length > 0 && data.songs[0].timestamp_raw) {
+                    const lastTimestamp = new Date(data.songs[0].timestamp_raw).getTime();
+                    lastSongMinutesAgo = Math.round((Date.now() - lastTimestamp) / 60000);
+                    lastSongMinutesAgoEl.textContent = lastSongMinutesAgo;
+                    lastSongMinutesAgoEl.dataset.lastTimestamp = lastTimestamp;
+                } else {
+                    lastSongMinutesAgoEl.textContent = '...';
+                    delete lastSongMinutesAgoEl.dataset.lastTimestamp;
+                }
                 document.getElementById('lastSongStation').innerHTML = data.songs && data.songs.length > 0 ? `<a href="/station.php#${encodeURIComponent(data.songs[0].station)}" class="text-decoration-none">${data.songs[0].station}</a>` : '...';
                 document.getElementById('lastSongTitle').innerHTML = data.songs && data.songs.length > 0 ? `<a href="/song.php#${encodeURIComponent(data.songs[0].song)}" class="text-decoration-none">${data.songs[0].song}</a>` : '...';
 
@@ -447,7 +456,7 @@
                 .then(response => response.json())
                 .then(data => {
                     const container = document.getElementById('nowPlayingContent');
-                    
+                    // ...existing code...
                     if (data.success && data.playing && data.playing.length > 0) {
                         let html = '<ul class="list-group list-group-flush">';
                         data.playing.forEach(item => {
@@ -473,6 +482,40 @@
                             </div>
                         `;
                     }
+
+                    // Update lastSongMinutesAgo
+                    // Find the most recent Phil Collins detection (if available)
+                    let lastSongTimestamp = null;
+                    if (data.playing && data.playing.length > 0) {
+                        // Find the most recent detection by timestamp_raw
+                        let maxTimestamp = null;
+                        data.playing.forEach(item => {
+                            if (item.timestamp_raw) {
+                                const ts = new Date(item.timestamp_raw).getTime();
+                                if (!maxTimestamp || ts > maxTimestamp) {
+                                    maxTimestamp = ts;
+                                }
+                            }
+                        });
+                        if (maxTimestamp) {
+                            lastSongTimestamp = new Date(maxTimestamp);
+                        }
+                    }
+                    const lastSongMinutesAgoEl = document.getElementById('lastSongMinutesAgo');
+                    if (lastSongTimestamp) {
+                        const minutesAgo = Math.round((Date.now() - lastSongTimestamp.getTime()) / 60000);
+                        lastSongMinutesAgoEl.textContent = minutesAgo;
+                        lastSongMinutesAgoEl.dataset.lastTimestamp = lastSongTimestamp.getTime();
+                    } else {
+                        // If we have a previous timestamp, recalculate
+                        if (lastSongMinutesAgoEl.dataset.lastTimestamp) {
+                            const prevTimestamp = parseInt(lastSongMinutesAgoEl.dataset.lastTimestamp);
+                            const minutesAgo = Math.round((Date.now() - prevTimestamp) / 60000);
+                            lastSongMinutesAgoEl.textContent = minutesAgo;
+                        } else {
+                            lastSongMinutesAgoEl.textContent = '...';
+                        }
+                    }
                 })
                 .catch(err => {
                     console.error('Failed to load now playing:', err);
@@ -481,6 +524,15 @@
                             <small>Fout bij het laden van gegevens</small>
                         </div>
                     `;
+                    // Retain previous value for lastSongMinutesAgo if available
+                    const lastSongMinutesAgoEl = document.getElementById('lastSongMinutesAgo');
+                    if (lastSongMinutesAgoEl.dataset.lastTimestamp) {
+                        const prevTimestamp = parseInt(lastSongMinutesAgoEl.dataset.lastTimestamp);
+                        const minutesAgo = Math.round((Date.now() - prevTimestamp) / 60000);
+                        lastSongMinutesAgoEl.textContent = minutesAgo;
+                    } else {
+                        lastSongMinutesAgoEl.textContent = '...';
+                    }
                 });
         }
 
