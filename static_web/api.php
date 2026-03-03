@@ -261,7 +261,8 @@ function now_playing() {
         $stmt->execute([$station, $cutoff_time]);
         
         $song_data = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($song_data && in_array($song_data['artist'], $target_artists)) {
+        //if ($song_data && in_array($song_data['artist'], $target_artists)) {
+        if ($song_data) {
             $ts = parse_iso_timestamp($song_data['timestamp']);
             if ($ts) {
                 $time_ago = (new DateTime())->getTimestamp() - $ts->getTimestamp();
