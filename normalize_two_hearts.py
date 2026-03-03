@@ -14,7 +14,7 @@ Usage:
 
 import db_connection as db
 
-CANONICAL_NAME = "Phil Collins & Philip Bailey"
+CANONICAL_NAME = "Phil Collins"
 TARGET_TITLE = "Two Hearts"
 
 def normalize_two_hearts():
