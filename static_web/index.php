@@ -39,7 +39,15 @@
             <div class="col-md-4 mb-2">
                 <div class="card h-100">
                     <div class="card-body">
-                        <h6 class="card-title">Trend in de laatste 14 dagen</h6>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h6 class="card-title mb-0">Trend</h6>
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Tijdsbereik">
+                                <button type="button" class="btn btn-outline-primary" data-range="7">7d</button>
+                                <button type="button" class="btn btn-outline-primary active" data-range="14">14d</button>
+                                <button type="button" class="btn btn-outline-primary" data-range="30">30d</button>
+                                <button type="button" class="btn btn-outline-primary" data-range="all">Alles</button>
+                            </div>
+                        </div>
                         <div style="height: 250px;">
                             <canvas id="timelineChart" width="400" height="300"></canvas>
                         </div>
@@ -144,6 +152,81 @@
         //console.log('Script starting...');
         const API_BASE = '/api.php'; // Adjust this path as needed
 
+        // ── Timeline chart with switchable range ──────────────────────────
+        let timelineChart = null;
+        function loadTimeline(range) {
+            fetch(`${API_BASE}/api/chart-data?range=${encodeURIComponent(range)}`)
+                .then(r => r.json())
+                .then(chartData => {
+                    if (!chartData || !chartData.timeline) {
+                        console.error('Unexpected chart-data response', chartData);
+                        return;
+                    }
+                    const timelineData = chartData.timeline.data || [];
+                    const avg = timelineData.length
+                        ? timelineData.reduce((a, b) => a + b, 0) / timelineData.length
+                        : 0;
+                    const avgArray = Array(timelineData.length).fill(avg);
+                    if (timelineChart) timelineChart.destroy();
+                    timelineChart = new Chart(document.getElementById('timelineChart'), {
+                        type: 'line',
+                        data: {
+                            labels: chartData.timeline.labels || [],
+                            datasets: [
+                                {
+                                    label: 'Dagelijkse Detecties',
+                                    data: timelineData,
+                                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                    borderColor: 'rgba(54, 162, 235, 1)',
+                                    borderWidth: 2,
+                                    fill: true,
+                                    tension: 0.3
+                                },
+                                {
+                                    label: 'Gemiddelde',
+                                    data: avgArray,
+                                    borderColor: 'rgba(255, 99, 132, 0.8)',
+                                    borderWidth: 2,
+                                    borderDash: [8, 6],
+                                    pointRadius: 0,
+                                    fill: false,
+                                    tension: 0,
+                                    type: 'line',
+                                    order: 1
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                            plugins: { legend: { display: true } },
+                            onHover: (event, elements) => {
+                                event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+                            },
+                            onClick: (event, elements) => {
+                                if (elements.length > 0 && chartData.timeline.dates) {
+                                    const isoDate = chartData.timeline.dates[elements[0].index];
+                                    if (isoDate) window.location.href = `/day.php?date=${encodeURIComponent(isoDate)}`;
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(err => console.error('Failed to load timeline data:', err));
+        }
+
+        document.querySelectorAll('[data-range]').forEach(btn => {
+            btn.addEventListener('click', e => {
+                document.querySelectorAll('[data-range]').forEach(b => b.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+                loadTimeline(e.currentTarget.dataset.range);
+            });
+        });
+
+        loadTimeline('14');
+        // ─────────────────────────────────────────────────────────────────
+
         // Load index data
         // console.log('Starting to load index data...');
         fetch(`${API_BASE}/api/index-data`)
@@ -245,65 +328,10 @@
                     `;
                     document.getElementById('recentDetectionsContainer').innerHTML = recentTableHtml;
 
-                    // Initialize timeline chart
+                    // Other charts (stations / songs / weekdays / hours)
                     fetch(`${API_BASE}/api/chart-data`)
                         .then(response => response.json())
                         .then(chartData => {
-                            // Calculate average for the timeline data
-                            const timelineData = chartData.timeline.data;
-                            const avg = timelineData.reduce((a, b) => a + b, 0) / (timelineData.length || 1);
-                            const avgArray = Array(timelineData.length).fill(avg);
-
-                            // Timeline chart with average line
-                            new Chart(document.getElementById('timelineChart'), {
-                                type: 'line',
-                                data: {
-                                    labels: chartData.timeline.labels,
-                                    datasets: [
-                                        {
-                                            label: 'Dagelijkse Detecties',
-                                            data: timelineData,
-                                            backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                                            borderColor: 'rgba(54, 162, 235, 1)',
-                                            borderWidth: 2,
-                                            fill: true,
-                                            tension: 0.3
-                                        },
-                                        {
-                                            label: 'Gemiddelde',
-                                            data: avgArray,
-                                            borderColor: 'rgba(255, 99, 132, 0.8)',
-                                            borderWidth: 2,
-                                            borderDash: [8, 6],
-                                            pointRadius: 0,
-                                            fill: false,
-                                            tension: 0,
-                                            type: 'line',
-                                            order: 1
-                                        }
-                                    ]
-                                },
-                                options: {
-                                    responsive: true,
-                                    maintainAspectRatio: false,
-                                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
-                                    plugins: { legend: { display: true } },
-                                    onHover: (event, elements) => {
-                                        event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
-                                    },
-                                    onClick: (event, elements) => {
-                                        // Use the index of the clicked point to find the ISO date from the API response
-                                        if (elements.length > 0 && chartData.timeline && chartData.timeline.dates) {
-                                            const idx = elements[0].index;
-                                            const isoDate = chartData.timeline.dates[idx];
-                                            if (isoDate) {
-                                                window.location.href = `/day.php?date=${encodeURIComponent(isoDate)}`;
-                                            }
-                                        }
-                                    }
-                                }
-                            });
-
                             // Stations chart (doughnut)
                             new Chart(document.getElementById('stationsChart'), {
                                 type: 'doughnut',

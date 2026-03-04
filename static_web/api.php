@@ -117,7 +117,7 @@ function get_setting($key, $default = null) {
     }
 }
 
-function chart_data() {
+function chart_data($range = '14') {
     $pdo = get_db_connection();
     
     // Songs per station (top 5)
@@ -194,9 +194,14 @@ function chart_data() {
     for ($h = 0; $h < 24; $h++) {
         $average_hours[$h] = $hours[$h] / $num_days;
     }
-    // Get last 14 days
+    // Build timeline slice based on $range
     krsort($days_count);
-    $sorted_days = array_slice($days_count, 0, 14, true);
+    if ($range === 'all') {
+        $sorted_days = $days_count;
+    } else {
+        $limit = max(1, intval($range));
+        $sorted_days = array_slice($days_count, 0, $limit, true);
+    }
     ksort($sorted_days);
     
     $day_names = ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'];
@@ -941,14 +946,15 @@ function day_charts($date) {
 }
 
 // Route handling
-$request_uri = $_SERVER['REQUEST_URI'] ?? '';
+$request_uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
 if (preg_match('#/api\.php/api/([^/]+)(?:/(.+))?#', $request_uri, $matches)) {
     $endpoint = $matches[1];
     $action = $matches[2] ?? '';
     
     switch ($endpoint) {
         case 'chart-data':
-            echo json_encode(chart_data());
+            $range = isset($_GET['range']) ? $_GET['range'] : '14';
+            echo json_encode(chart_data($range));
             break;
         case 'now-playing':
             echo json_encode(now_playing());
