@@ -317,7 +317,7 @@ def fetch_station_from_myonlineradio_selenium(station_slug):
 
 
     service = Service('chromedriver')  # Adjust path if needed
-    driver = webdriver.Chrome(service=service, options=options)
+    driver = webdriver.Chrome()
    
 
     url = f'https://myonlineradio.nl/{station_slug}'
