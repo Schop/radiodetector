@@ -9,6 +9,8 @@ import sys
 from colorama import Fore, Style, init
 import db_connection as db
 import bluesky_post
+from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 
 # Initialize colorama for cross-platform colored terminal output
 init(autoreset=True)
@@ -301,53 +303,88 @@ def fetch_icy_metadata_from_stream(stream_url, station_name):
         return None
 
 
+
+def fetch_station_from_myonlineradio_selenium(station_slug):
+    options = Options()
+    options.add_argument("--headless=new")
+    options.add_argument("--disable-gpu")
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-extensions")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("window-size=1280,800")
+    #options.binary_location = "/usr/bin/chromium-browser"  # Pi OS location
+
+    # Adapt if path differs
+    try:
+        driver = webdriver.Chrome(options=options)
+    except Exception:  # fallback to possible RPi legacy paths
+        driver = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver', options=options)
+
+    url = f'https://myonlineradio.nl/{station_slug}'
+    driver.get(url)
+    html = driver.page_source
+    driver.quit()
+
+    soup = BeautifulSoup(html, 'html.parser')
+    act_song_div = soup.find('div', {'class': 'actSong'})
+    if act_song_div:
+        a_tag = act_song_div.find('a')
+        if a_tag:
+            song_info = a_tag.get_text(strip=True)
+            if ' - ' in song_info:
+                artist, song = song_info.split(' - ', 1)
+                return (artist.strip(), song.strip())
+            else:
+                return ('Unknown', song_info.strip())
+    return None
+
 def fetch_station_from_myonlineradio(station_slug):
-    """Fetch and parse any station from myonlineradio.nl playlist page"""
+    """Fetch current song from the main myonlineradio.nl station page (using .actSong)."""
     try:
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Linux; Android 13; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/145.0.0.0 Mobile Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+            'Accept-Language': 'en-US,en;q=0.9,nl-NL;q=0.8,nl;q=0.7',
+            'Referer': 'https://myonlineradio.nl/service-worker.min.js?info=260305190604',
+            'Pragma': 'no-cache',
+            'Cache-Control': 'no-cache',
+            'Upgrade-Insecure-Requests': '1',
+            'Sec-Fetch-Dest': 'empty',
+            'Sec-Fetch-Mode': 'same-origin',
+            'Sec-Fetch-Site': 'same-origin',
+            # 'Accept-Encoding': 'gzip, deflate, br, zstd',  # Let requests handle encoding
+            'Cookie': 'stpdsck=1; webp_support=1; ttv7_act=2026-3-7; ttv7=4; PHPSESSID=850n54govpphtj7h5fccqlp9mv; sw-version=260305190604; radioSteps=eyJqb2UiOnsibmFtZSI6IkpPRSIsInJpZCI6IjYwIiwicGljIjoianBnIiwidGltZSI6MTc3MjkxMTM5Niwidmlld19udW0iOjR9LCJyYWRpby1yaWpubW9uZCI6eyJuYW1lIjoiUmFkaW8lMjBSaWpubW9uZCIsInJpZCI6IjI3IiwicGljIjoianBnIiwidGltZSI6MTc3MjkxMDkyMiwidmlld19udW0iOjF9fQ%3D%3D'
         }
-        response = requests.get(f'https://myonlineradio.nl/{station_slug}/playlist', timeout=15, headers=headers)
+        url = f'https://myonlineradio.nl/{station_slug}'
+        response = requests.get(url, timeout=15, headers=headers)
         response.raise_for_status()
-        
         soup = BeautifulSoup(response.text, 'html.parser')
-        
-        # Find the js-songListC div with data-url matching the station
-        song_list = soup.find('div', {'class': 'js-songListC', 'data-url': station_slug})
-        if not song_list:
-            return None
-        
-        # Find all song rows (they have class yt-row or live-link)
-        tracks = song_list.find_all('div', {'class': lambda x: x and 'yt-row' in x})
-        
-        if not tracks:
-            return None
-        
-        # Get the first track (most recent)
-        first_track = tracks[0]
-        
-        # Extract artist (byArtist span)
-        artist_span = first_track.find('span', {'itemprop': 'byArtist'})
-        if not artist_span:
-            return None
-        artist = artist_span.text.strip()
-        
-        # Extract song name (name span)
-        song_span = first_track.find('span', {'itemprop': 'name'})
-        if not song_span:
-            return None
-        song = song_span.text.strip()
-        
-        if artist and song:
-            return (artist, song)
-        
-        return None
-    
-    except Exception as e:
-        # Only print if verbose debugging needed
-        # print(f"Error fetching {station_slug} from myonlineradio.nl: {e}")
-        return None
 
+        # Find the .actSong div
+        act_song_div = soup.find('div', {'class': 'actSong'})
+        if not act_song_div:
+            return None
+        
+        # Find the <a> inside .actSong
+        a_tag = act_song_div.find('a')
+        if not a_tag:
+            return None
+        
+        # The text is "ARTIST - Title"
+        song_info = a_tag.get_text(strip=True)
+        # Sometimes there are multiple " - ", so split on the first only
+        if ' - ' in song_info:
+            artist, song = song_info.split(' - ', 1)
+            artist = artist.strip()
+            song = song.strip()
+            return (artist, song)
+        else:
+            # fallback: treat all as title, artist unknown
+            return ('Unknown', song_info.strip())
+        
+    except Exception as e:
+        print(f"Error fetching {station_slug} on myonlineradio.nl: {e}")
+        return None
 
 def fetch_station_from_playlist24(station_slug):
     """Fetch and parse any station from playlist24.nl playlist page"""
@@ -552,7 +589,7 @@ def main():
                 for station_name in PRIORITY_MYONLINERADIO:
                     if station_name in ALL_MYONLINERADIO_STATIONS:
                         slug = ALL_MYONLINERADIO_STATIONS[station_name]
-                        result = fetch_station_from_myonlineradio(slug)
+                        result = fetch_station_from_myonlineradio_selenium(slug)
                         if result:
                             stations_data[station_name] = (result[0], result[1], 'myonlineradio.nl')
             
@@ -575,7 +612,7 @@ def main():
                     if station_name in stations_data:
                         continue
                     
-                    result = fetch_station_from_myonlineradio(slug)
+                    result = fetch_station_from_myonlineradio_selenium(slug)
                     if result:
                         stations_data[station_name] = (result[0], result[1], 'myonlineradio.nl')
             
@@ -696,5 +733,11 @@ def main():
     finally:
         conn.close()
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "testmyradiosel":
+        station_slug = sys.argv[2]
+        print(f"Testing Selenium for slug: {station_slug}")
+        result = fetch_station_from_myonlineradio_selenium(station_slug)
+        print("Result:", result)
+    else:
+        main()
