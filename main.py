@@ -313,10 +313,9 @@ def fetch_station_from_myonlineradio_selenium(station_slug):
     options.add_argument("--disable-extensions")
     options.add_argument("--disable-dev-shm-usage")
     options.add_argument("window-size=1280,800")
-    #options.binary_location = "/usr/bin/chromium-browser"  # Pi OS location
+    options.binary_location = "/usr/bin/chromium-browser"  # Pi OS location
 
 
-    service = Service('chromedriver')  # Adjust path if needed
     driver = webdriver.Chrome()
    
 
