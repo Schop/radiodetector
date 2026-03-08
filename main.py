@@ -316,7 +316,7 @@ def fetch_station_from_myonlineradio_selenium(station_slug):
     #options.binary_location = "/usr/bin/chromium-browser"  # Pi OS location
 
 
-    service = Service('/usr/lib/chromium-browser/chromedriver')  # Adjust path if needed
+    service = Service('chromedriver')  # Adjust path if needed
     driver = webdriver.Chrome(service=service, options=options)
    
 
