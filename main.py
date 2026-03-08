@@ -315,12 +315,10 @@ def fetch_station_from_myonlineradio_selenium(station_slug):
     options.add_argument("window-size=1280,800")
     #options.binary_location = "/usr/bin/chromium-browser"  # Pi OS location
 
-    # Adapt if path differs
-    try:
-        service = Service('/usr/lib/chromium-browser/chromedriver')  # Adjust path if needed
-        driver = webdriver.Chrome(service=service, options=options)
-    except Exception:  # fallback to possible RPi legacy paths
-        driver = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver', options=options)
+
+    service = Service('/usr/lib/chromium-browser/chromedriver')  # Adjust path if needed
+    driver = webdriver.Chrome(service=service, options=options)
+   
 
     url = f'https://myonlineradio.nl/{station_slug}'
     driver.get(url)
