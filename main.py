@@ -588,7 +588,7 @@ def main():
                 for station_name in PRIORITY_MYONLINERADIO:
                     if station_name in ALL_MYONLINERADIO_STATIONS:
                         slug = ALL_MYONLINERADIO_STATIONS[station_name]
-                        result = fetch_station_from_myonlineradio_selenium(slug)
+                        result = fetch_station_from_myonlineradio(slug)
                         if result:
                             stations_data[station_name] = (result[0], result[1], 'myonlineradio.nl')
             
@@ -611,7 +611,7 @@ def main():
                     if station_name in stations_data:
                         continue
                     
-                    result = fetch_station_from_myonlineradio_selenium(slug)
+                    result = fetch_station_from_myonlineradio(slug)
                     if result:
                         stations_data[station_name] = (result[0], result[1], 'myonlineradio.nl')
             
