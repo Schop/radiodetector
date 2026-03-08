@@ -11,6 +11,7 @@ import db_connection as db
 import bluesky_post
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.chrome.service import Service
 
 # Initialize colorama for cross-platform colored terminal output
 init(autoreset=True)
@@ -316,7 +317,8 @@ def fetch_station_from_myonlineradio_selenium(station_slug):
 
     # Adapt if path differs
     try:
-        driver = webdriver.Chrome(options=options)
+        service = Service('/usr/lib/chromium-browser/chromedriver')  # Adjust path if needed
+        driver = webdriver.Chrome(service=service, options=options)
     except Exception:  # fallback to possible RPi legacy paths
         driver = webdriver.Chrome('/usr/lib/chromium-browser/chromedriver', options=options)
 
