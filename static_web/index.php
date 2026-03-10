@@ -183,7 +183,7 @@
                                     tension: 0.3
                                 },
                                 {
-                                    label: 'Gemiddelde',
+                                    label: 'Gemiddelde: ' + avg.toFixed(2),
                                     data: avgArray,
                                     borderColor: 'rgba(255, 99, 132, 0.8)',
                                     borderWidth: 2,
