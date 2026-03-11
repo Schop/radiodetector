@@ -689,7 +689,7 @@ def main():
                                       (station, normalized_song, normalized_artist, timestamp), db_type)
                             conn.commit()
                             # Print with red warning and timestamp
-                            log_print(f"[{ts}] [{station}] [{source}] {normalized_song_info}", Fore.RED, Style.BRIGHT)
+                            log_print(f"[{ts}] {station}: {normalized_song_info}", Fore.RED, Style.BRIGHT)
 
                             # Upload database to web server after new detection
                             try:
@@ -715,7 +715,7 @@ def main():
 
                         else:
                             # Print normally for non-matching songs
-                            log_print(f"[{ts}] [{station}] [{source}] {normalized_song_info}")
+                            log_print(f"[{ts}] {station}: {normalized_song_info}")
             
             # Print status message
             if songs_changed == 0:
@@ -723,6 +723,7 @@ def main():
                 log_print(f"[{ts}] No song changes detected", Fore.CYAN)
             
             # Wait 60 seconds before next check
+            log_print("=" * 60, Fore.CYAN)
             log_print("Waiting 60 seconds to update the list again...", Fore.CYAN)
             log_print("=" * 60, Fore.CYAN)
             time.sleep(60)
