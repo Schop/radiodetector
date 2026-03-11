@@ -28,23 +28,27 @@ def get_user_input():
     if not song:
         print("Song title is required!")
         return None
-    
-    # Ask for custom timestamp or use current time
-    use_current = input("Use current timestamp? (Y/n): ").strip().lower()
-    if use_current in ['', 'y', 'yes']:
+
+    # Ask for timestamp (no default to current time)
+    timestamp_input = input("Enter timestamp (YYYY-MM-DD HH:MM[:SS] or 'now' for current time): ").strip()
+    if timestamp_input.lower() == 'now':
         timestamp = datetime.now().isoformat()
-    else:
-        timestamp_input = input("Enter timestamp (YYYY-MM-DD HH:MM:SS or leave empty for now): ").strip()
-        if timestamp_input:
+    elif timestamp_input:
+        try:
+            # First try with seconds
+            parsed_time = datetime.strptime(timestamp_input, '%Y-%m-%d %H:%M:%S')
+            timestamp = parsed_time.isoformat()
+        except ValueError:
             try:
-                # Try to parse the input timestamp
-                parsed_time = datetime.strptime(timestamp_input, '%Y-%m-%d %H:%M:%S')
+                # Try without seconds (default to :00)
+                parsed_time = datetime.strptime(timestamp_input, '%Y-%m-%d %H:%M')
                 timestamp = parsed_time.isoformat()
             except ValueError:
-                print("Invalid timestamp format! Using current time instead.")
-                timestamp = datetime.now().isoformat()
-        else:
-            timestamp = datetime.now().isoformat()
+                print("Invalid timestamp format! Please use: YYYY-MM-DD HH:MM or YYYY-MM-DD HH:MM:SS")
+                return None
+    else:
+        print("Timestamp is required!")
+        return None
     
     return {
         'station': station,
