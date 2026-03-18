@@ -182,7 +182,7 @@
                     new Chart(document.getElementById('songsChart'), {
                         type: 'bar',
                         data: { labels: data.songs.labels || [], datasets: [{ data: data.songs.data || [], backgroundColor: 'rgba(255,99,132,0.6)' }] },
-                        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x:{ ticks: { precision: 0}}} }
                     });
 
                     // Cumulative buildup (line) — now with average overlay
