@@ -199,7 +199,7 @@
                         options: {
                             responsive: true,
                             maintainAspectRatio: false,
-                            scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                            scales: { y: { beginAtZero: false, ticks: { precision: 0 } } },
                             plugins: { legend: { display: true } },
                             onHover: (event, elements) => {
                                 event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
@@ -389,7 +389,7 @@
                                     responsive: true,
                                     maintainAspectRatio: false,
                                     indexAxis: 'y',
-                                    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
+                                    scales: { x: { beginAtZero: false, ticks: { precision: 0 } } },
                                     plugins: { legend: { display: false } },
                                     onHover: (event, elements) => {
                                         event.native.target.style.cursor = elements.length > 0 ? 'pointer' : 'default';
@@ -420,7 +420,7 @@
                                 options: {
                                     responsive: true,
                                     maintainAspectRatio: false,
-                                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } },
+                                    scales: { y: { beginAtZero: false, ticks: { precision: 0 } } },
                                     plugins: { legend: { display: false } }
                                 }
                             });
