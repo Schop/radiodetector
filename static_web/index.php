@@ -163,8 +163,11 @@
                         return;
                     }
                     const timelineData = chartData.timeline.data || [];
-                    const avg = timelineData.length
-                        ? timelineData.reduce((a, b) => a + b, 0) / timelineData.length
+                    // weight by observed share of each day, so outage days don't drag the average down
+                    const coverage = chartData.timeline.coverage || timelineData.map(() => 1);
+                    const observedDays = coverage.reduce((a, b) => a + b, 0);
+                    const avg = observedDays > 0
+                        ? timelineData.reduce((a, b) => a + b, 0) / observedDays
                         : 0;
                     const avgArray = Array(timelineData.length).fill(avg);
                     if (timelineChart) timelineChart.destroy();

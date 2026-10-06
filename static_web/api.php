@@ -117,6 +117,47 @@ function get_setting($key, $default = null) {
     }
 }
 
+// Periods to leave out of averages and gap statistics (e.g. the Pi was offline).
+// Stored as setting 'excluded_periods': [{"start": "2026-09-06T04:33:43", "end": "2026-09-07T03:59:06"}]
+function get_excluded_periods() {
+    static $periods = null;
+    if ($periods !== null) return $periods;
+    $periods = [];
+    $raw = get_setting('excluded_periods', []);
+    if (is_array($raw)) {
+        foreach ($raw as $p) {
+            if (!isset($p['start'], $p['end'])) continue;
+            $s = parse_iso_timestamp($p['start']);
+            $e = parse_iso_timestamp($p['end']);
+            if ($s && $e && $e > $s) $periods[] = [$s->getTimestamp(), $e->getTimestamp()];
+        }
+    }
+    return $periods;
+}
+
+// Seconds of [$from, $to] (epoch) that fall inside excluded periods
+function excluded_seconds($from, $to) {
+    $total = 0;
+    foreach (get_excluded_periods() as [$s, $e]) {
+        $overlap = min($to, $e) - max($from, $s);
+        if ($overlap > 0) $total += $overlap;
+    }
+    return $total;
+}
+
+// Fraction (0..1) of a day (or of one hour of it) that is NOT excluded
+function slot_coverage($date_key, $hour = null) {
+    if (!get_excluded_periods()) return 1.0;
+    $start = new DateTime($date_key . ' 00:00:00');
+    if ($hour !== null) $start->setTime($hour, 0);
+    $end = clone $start;
+    $end->modify($hour === null ? '+1 day' : '+1 hour');
+    $from = $start->getTimestamp();
+    $to = $end->getTimestamp();
+    if ($to <= $from) return 1.0;
+    return max(0.0, 1 - excluded_seconds($from, $to) / ($to - $from));
+}
+
 function chart_data($range = '14') {
     $pdo = get_db_connection();
     
@@ -169,13 +210,14 @@ function chart_data($range = '14') {
         }
     }
     // Count how many distinct dates we have for each weekday so we can compute averages
+    // (a day partly inside an excluded period counts as a fraction of a day)
     $distinct_dates_per_weekday = array_fill(0, 7, 0);
     foreach (array_keys($days_count) as $date_key) {
         if ($date_key === $today_iso) continue; // Exclude today
         $dt = DateTime::createFromFormat('Y-m-d', $date_key);
         if ($dt) {
             $wd = ((int)$dt->format('N')) - 1;
-            $distinct_dates_per_weekday[$wd] += 1;
+            $distinct_dates_per_weekday[$wd] += slot_coverage($date_key);
         }
     }
 
@@ -188,11 +230,15 @@ function chart_data($range = '14') {
             $average_weekdays[$i] = 0;
         }
     }
-    // Compute average songs per hour (total songs in each hour / number of distinct dates observed)
-    $num_days = max(1, count($days_count));
+    // Compute average songs per hour (total songs in each hour / number of days observed,
+    // counting only the part of each day outside excluded periods)
     $average_hours = array_fill(0, 24, 0);
     for ($h = 0; $h < 24; $h++) {
-        $average_hours[$h] = $hours[$h] / $num_days;
+        $observed = 0;
+        foreach (array_keys($days_count) as $date_key) {
+            $observed += slot_coverage($date_key, $h);
+        }
+        $average_hours[$h] = $observed > 0 ? $hours[$h] / $observed : 0;
     }
     // Build timeline slice based on $range
     krsort($days_count);
@@ -230,7 +276,9 @@ function chart_data($range = '14') {
             }, array_keys($sorted_days)),
             'data' => array_values($sorted_days),
             // raw ISO dates (index-aligned with labels) — useful for linking from charts
-            'dates' => array_keys($sorted_days)
+            'dates' => array_keys($sorted_days),
+            // share of each day that was observed (1 = whole day, lower if part was excluded)
+            'coverage' => array_map('slot_coverage', array_keys($sorted_days))
         ]
     ];
 }
@@ -392,13 +440,13 @@ function station_charts($station_name) {
             $days_count[$date_key] = ($days_count[$date_key] ?? 0) + 1;
         }
     }
-    // Count distinct dates per weekday to compute averages
+    // Count distinct dates per weekday to compute averages (excluded time counts as a fraction of a day)
     $distinct_dates_per_weekday = array_fill(0, 7, 0);
     foreach (array_keys($days_count) as $date_key) {
         $dt = DateTime::createFromFormat('Y-m-d', $date_key);
         if ($dt) {
             $wd = ((int)$dt->format('N')) - 1;
-            $distinct_dates_per_weekday[$wd] += 1;
+            $distinct_dates_per_weekday[$wd] += slot_coverage($date_key);
         }
     }
 
@@ -417,11 +465,15 @@ function station_charts($station_name) {
         $average_hours[$h] = $hours[$h] / $num_days;
     }
 
-    // Compute average songs per hour (total songs in each hour / number of distinct dates observed)
-    $num_days = max(1, count($days_count));
+    // Compute average songs per hour (total songs in each hour / number of days observed,
+    // counting only the part of each day outside excluded periods)
     $average_hours = array_fill(0, 24, 0);
     for ($h = 0; $h < 24; $h++) {
-        $average_hours[$h] = $hours[$h] / $num_days;
+        $observed = 0;
+        foreach (array_keys($days_count) as $date_key) {
+            $observed += slot_coverage($date_key, $h);
+        }
+        $average_hours[$h] = $observed > 0 ? $hours[$h] / $observed : 0;
     }
     // Build last 14 days (including today) with zero fill for missing days
     $sorted_days = [];
@@ -490,6 +542,7 @@ function index_data() {
         $dt_last = parse_iso_timestamp($last_ts);
         if ($dt_first && $dt_last) {
             $diff_seconds = $dt_last->getTimestamp() - $dt_first->getTimestamp();
+            $diff_seconds -= excluded_seconds($dt_first->getTimestamp(), $dt_last->getTimestamp());
             $hours_between = (int)round($diff_seconds / 3600);
         }
     }
@@ -523,7 +576,8 @@ function index_data() {
             if (!$dt) continue;
             $epoch = $dt->getTimestamp();
             if ($prev_epoch !== null && is_array($prev_iso)) {
-                $diff = $epoch - $prev_epoch;
+                // time inside excluded periods (outages) does not count towards a gap
+                $diff = $epoch - $prev_epoch - excluded_seconds($prev_epoch, $epoch);
                 if ($diff > $largest_gap_seconds) {
                     $largest_gap_seconds = $diff;
                     $gap_start_ts = $prev_iso['timestamp'] ?? null;
@@ -750,13 +804,13 @@ function song_charts($song_name) {
             $days_count[$date_key] = ($days_count[$date_key] ?? 0) + 1;
         }
     }
-    // Count distinct dates per weekday to compute averages
+    // Count distinct dates per weekday to compute averages (excluded time counts as a fraction of a day)
     $distinct_dates_per_weekday = array_fill(0, 7, 0);
     foreach (array_keys($days_count) as $date_key) {
         $dt = DateTime::createFromFormat('Y-m-d', $date_key);
         if ($dt) {
             $wd = ((int)$dt->format('N')) - 1;
-            $distinct_dates_per_weekday[$wd] += 1;
+            $distinct_dates_per_weekday[$wd] += slot_coverage($date_key);
         }
     }
 
