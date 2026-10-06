@@ -22,12 +22,16 @@ UPTIME_FILE = '.uptime'
 
 def log_print(message, color='', style=''):
     """Print to console with color and write to log file"""
+    # When stdout is redirected (systemd -> radio.log) there is no other timestamp,
+    # so prefix the full date/time to keep the log datable
+    prefix = '' if sys.stdout.isatty() else f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}] "
+
     # Print to console with color
     if color or style:
-        print(f"{color}{style}{message}{Style.RESET_ALL}")
+        print(f"{prefix}{color}{style}{message}{Style.RESET_ALL}")
     else:
-        print(message)
-    
+        print(f"{prefix}{message}")
+
     # Only write to log file explicitly if stdout is a terminal (not redirected)
     # When running as systemd service, stdout is redirected to radio.log
     # so we don't need to write to file explicitly (avoids duplicates)
