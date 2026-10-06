@@ -8,7 +8,6 @@ import yaml
 import sys
 from colorama import Fore, Style, init
 import db_connection as db
-import bluesky_post
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.chrome.service import Service
@@ -749,13 +748,6 @@ def main():
 
                             # Upload database to web server after new detection
                             try:
-                                # Try posting to Bluesky (non-fatal)
-                                try:
-                                    bluesky_post.post_song(normalized_artist, normalized_song, station=station)
-                                    log_print('Posted detection to Bluesky', Fore.GREEN)
-                                except Exception as e:
-                                    log_print(f'Could not post to Bluesky: {e}', Fore.YELLOW)
-
                                 import subprocess
                                 result = subprocess.run(['python3', 'upload_db.py'], 
                                                       capture_output=True, text=True, timeout=30)
