@@ -591,7 +591,9 @@ def main():
                         result = fetch_station_from_myonlineradio(slug)
                         if result:
                             stations_data[station_name] = (result[0], result[1], 'myonlineradio.nl')
-            
+                        else:
+                            log_print(f"Warning: no now-playing data for priority station {station_name} on myonlineradio.nl", Fore.YELLOW)
+
             # Fetch from relisten.nl (homepage scraping)
             if RELISTEN_STATIONS:
                 relisten_data = fetch_all_stations_from_relisten()
@@ -690,7 +692,7 @@ def main():
                             conn.commit()
                             # Print with red warning and timestamp
                             log_print("=" * 60, Fore.RED, Style.BRIGHT)
-                            log_print(f"[{ts}] {station}: {normalized_song_info}", Fore.RED, Style.BRIGHT)
+                            log_print(f"[{ts}] {station}: {normalized_song_info} (via {source})", Fore.RED, Style.BRIGHT)
 
                             # Upload database to web server after new detection
                             try:
@@ -716,7 +718,7 @@ def main():
 
                         else:
                             # Print normally for non-matching songs
-                            log_print(f"[{ts}] {station}: {normalized_song_info}")
+                            log_print(f"[{ts}] {station}: {normalized_song_info} (via {source})")
             
             # Print status message
             if songs_changed == 0:
