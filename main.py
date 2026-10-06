@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
-from datetime import datetime
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import time
 import re
 import os
@@ -400,6 +401,49 @@ def fetch_station_from_myonlineradio(station_slug):
         print(f"Error fetching {station_slug} on myonlineradio.nl: {e}")
         return None
 
+# NPO stations share one now-playing API: https://www.<site>.nl/api/tracks
+NPO_STATION_SITES = {
+    'NPO Radio 1': 'nporadio1',
+    'NPO Radio 2': 'nporadio2',
+    'NPO 3FM': 'npo3fm',
+    'NPO Radio 5': 'nporadio5',
+}
+NPO_MAX_AGE = timedelta(minutes=20)  # ignore a feed whose newest track ended longer ago than this
+
+def fetch_station_from_npo(site):
+    """Fetch current song from an NPO station's own tracks API (the broadcaster's feed)"""
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(f'https://www.{site}.nl/api/tracks', timeout=15, headers=headers)
+        response.raise_for_status()
+        tracks = response.json().get('data', [])
+
+        # Times are naive Amsterdam local time
+        now = datetime.now(ZoneInfo('Europe/Amsterdam')).replace(tzinfo=None)
+        started = []
+        for t in tracks:
+            try:
+                start = datetime.fromisoformat(t['startdatetime'])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if start <= now and (t.get('artist') or '').strip() and (t.get('title') or '').strip():
+                started.append((start, t))
+        if not started:
+            return None
+
+        start, track = max(started, key=lambda x: x[0])
+        try:
+            end = datetime.fromisoformat(track['enddatetime'])
+        except (KeyError, TypeError, ValueError):
+            end = start
+        if now - max(start, end) > NPO_MAX_AGE:
+            return None  # feed looks stale, let the other sources handle it
+        return (track['artist'].strip(), track['title'].strip())
+
+    except Exception as e:
+        log_print(f"Error fetching {site} from its NPO API: {e}", Fore.YELLOW)
+        return None
+
 def fetch_arrow_from_arrow_nl():
     """Fetch current song from arrow.nl's own now-playing API (the broadcaster's feed)"""
     try:
@@ -621,6 +665,13 @@ def main():
                 result = fetch_arrow_from_arrow_nl()
                 if result:
                     stations_data[arrow_name] = (result[0], result[1], 'arrow.nl')
+
+            # NPO stations: their own tracks API, same idea as Arrow
+            for npo_name, site in NPO_STATION_SITES.items():
+                if npo_name in RELISTEN_STATIONS or npo_name in ALL_MYONLINERADIO_STATIONS or npo_name in ALL_PLAYLIST24_STATIONS:
+                    result = fetch_station_from_npo(site)
+                    if result:
+                        stations_data[npo_name] = (result[0], result[1], f'{site}.nl')
 
             # PRIORITY STATIONS: Fetch from myonlineradio FIRST for stations that need it
             # (e.g., Radio 538 which is not reliably on relisten.nl homepage)
