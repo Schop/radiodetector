@@ -401,6 +401,24 @@ def fetch_station_from_myonlineradio(station_slug):
         print(f"Error fetching {station_slug} on myonlineradio.nl: {e}")
         return None
 
+def fetch_arrow_from_arrow_nl():
+    """Fetch current song from arrow.nl's own now-playing API (the broadcaster's feed)"""
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get('https://www.arrow.nl/api/nowplaying', timeout=15, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        artist = (data.get('artist') or '').strip()
+        title = (data.get('title') or '').strip()
+        if not data.get('hasCurrentTrack', True) or not artist or not title:
+            return None
+        return (artist, title)
+
+    except Exception as e:
+        log_print(f"Error fetching Arrow Classic Rock from arrow.nl: {e}", Fore.YELLOW)
+        return None
+
 def fetch_station_from_playlist24(station_slug):
     """Fetch and parse any station from playlist24.nl playlist page"""
     try:
@@ -598,10 +616,19 @@ def main():
             stations_data = {}
             relisten_failed = False
             
+            # Arrow Classic Rock: the station's own API is fresher than the aggregator sites
+            arrow_name = 'Arrow Classic Rock'
+            if arrow_name in RELISTEN_STATIONS or arrow_name in ALL_MYONLINERADIO_STATIONS or arrow_name in ALL_PLAYLIST24_STATIONS:
+                result = fetch_arrow_from_arrow_nl()
+                if result:
+                    stations_data[arrow_name] = (result[0], result[1], 'arrow.nl')
+
             # PRIORITY STATIONS: Fetch from myonlineradio FIRST for stations that need it
             # (e.g., Radio 538 which is not reliably on relisten.nl homepage)
             if PRIORITY_MYONLINERADIO and ALL_MYONLINERADIO_STATIONS:
                 for station_name in PRIORITY_MYONLINERADIO:
+                    if station_name in stations_data:
+                        continue  # already have data from a better source
                     if station_name in ALL_MYONLINERADIO_STATIONS:
                         slug = ALL_MYONLINERADIO_STATIONS[station_name]
                         result = fetch_station_from_myonlineradio(slug)
