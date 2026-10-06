@@ -617,11 +617,12 @@ def main():
                     stations_data.update(relisten_data)
                 else:
                     relisten_failed = True
+                    log_print("Warning: relisten.nl returned no data, falling back to other sources", Fore.YELLOW)
             
             # Fetch from myonlineradio.nl (individual station playlists)
-            # If relisten failed, use ALL myonlineradio stations (including duplicates)
-            # Otherwise use only unique stations to avoid redundant checks
-            myonline_stations_to_check = ALL_MYONLINERADIO_STATIONS if relisten_failed else MYONLINERADIO_STATIONS
+            # Always consider ALL myonlineradio stations: anything relisten did not deliver
+            # (failed fetch or rotated off its homepage) is fetched here, the rest is skipped below
+            myonline_stations_to_check = ALL_MYONLINERADIO_STATIONS
             
             if myonline_stations_to_check:
                 for station_name, slug in myonline_stations_to_check.items():
@@ -634,10 +635,8 @@ def main():
                         stations_data[station_name] = (result[0], result[1], 'myonlineradio.nl')
             
             # Fetch from playlist24.nl (individual station playlists)
-            # If both relisten and myonlineradio failed or returned few results, try all playlist24 stations
-            # Otherwise use only unique stations to avoid redundant checks
-            use_all_playlist24 = relisten_failed or len(stations_data) < 5
-            playlist24_stations_to_check = ALL_PLAYLIST24_STATIONS if use_all_playlist24 else PLAYLIST24_STATIONS
+            # Same per-station fallback: only stations still missing after the other sources are fetched
+            playlist24_stations_to_check = ALL_PLAYLIST24_STATIONS
             
             if playlist24_stations_to_check:
                 for station_name, slug in playlist24_stations_to_check.items():
