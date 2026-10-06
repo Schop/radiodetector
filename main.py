@@ -236,6 +236,18 @@ def normalize_song_title(title):
     
     return ' '.join(words)
 
+# Stations whose sources sometimes report "title - artist" instead of "artist - title"
+SWAPPED_ORDER_STATIONS = {'JOE'}
+
+def matches_target(artist, song):
+    """True if the artist or song matches a configured target (artist/song already normalized)"""
+    for target_artist in TARGET_ARTISTS:
+        if target_artist == "Phil Collins" and target_artist.lower() in artist.lower():
+            return True
+        if target_artist == "Genesis" and target_artist.lower() == artist.lower():
+            return True
+    return any(t and t.lower() in song.lower() for t in TARGET_SONGS)
+
 def create_song_key(artist, song):
     """Create a normalized key for song comparison to handle different orderings"""
     # Normalize both parts
@@ -650,6 +662,14 @@ def main():
                     # Normalize song title (remove patterns like "#742: ")
                     normalized_song = normalize_song_title(song)
                     normalized_artist = normalize_song_title(artist)
+
+                    # Some stations report title first; swap if only the swapped order hits a target
+                    if (station in SWAPPED_ORDER_STATIONS
+                            and not matches_target(normalized_artist, normalized_song)
+                            and matches_target(normalized_song, normalized_artist)):
+                        artist, song = song, artist
+                        normalized_artist, normalized_song = normalized_song, normalized_artist
+
                     normalized_song_info = f"{normalized_artist} - {normalized_song}"
 
                     # Create a unique key to detect if this is the same song (handles ordering issues)
