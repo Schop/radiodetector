@@ -614,7 +614,10 @@ def main():
             if RELISTEN_STATIONS:
                 relisten_data = fetch_all_stations_from_relisten()
                 if relisten_data:
-                    stations_data.update(relisten_data)
+                    # Priority stations already fetched from myonlineradio keep that data:
+                    # relisten can show stale songs (e.g. Arrow Classic Rock: months old)
+                    for station_name, data in relisten_data.items():
+                        stations_data.setdefault(station_name, data)
                 else:
                     relisten_failed = True
                     log_print("Warning: relisten.nl returned no data, falling back to other sources", Fore.YELLOW)
