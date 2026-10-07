@@ -870,6 +870,103 @@ function song_charts($song_name) {
 }
 
 
+// Overview of a side-project song (e.g. Toto - Africa) from the tracked_songs table.
+// That table is kept apart from `songs`, so none of this ever reaches the Phil Collins statistics.
+function tracked_overview($artist, $song) {
+    $pdo = get_db_connection();
+    try {
+        $stmt = $pdo->prepare("SELECT station, song, timestamp FROM tracked_songs WHERE LOWER(artist) = LOWER(?) ORDER BY timestamp DESC");
+        if (!$stmt || !$stmt->execute([$artist])) {
+            return ['error' => 'tracked_songs table not available'];
+        }
+        $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        return ['error' => 'tracked_songs table not available'];
+    }
+    // match on the title like the detector does, so "Africa (Live)" counts too
+    $rows = array_values(array_filter($rows, fn($r) => stripos($r['song'], $song) !== false));
+
+    $today_iso = (new DateTime())->format('Y-m-d');
+    $stations = [];
+    $hours = array_fill(0, 24, 0);
+    $weekday_plays = array_fill(0, 7, 0);
+    $by_day = [];
+    foreach ($rows as $r) {
+        $ts = parse_iso_timestamp($r['timestamp']);
+        if (!$ts) continue;
+        $day = $ts->format('Y-m-d');
+        $stations[$r['station']] = ($stations[$r['station']] ?? 0) + 1;
+        $hours[(int)$ts->format('G')]++;
+        $by_day[$day] = ($by_day[$day] ?? 0) + 1;
+        if ($day !== $today_iso) $weekday_plays[((int)$ts->format('N')) - 1]++;
+    }
+    arsort($stations);
+
+    $last_ts = $rows ? $rows[0]['timestamp'] : null;
+    $first_ts = $rows ? $rows[count($rows) - 1]['timestamp'] : null;
+
+    // Days observed (first play up to yesterday), minus time inside excluded periods such as outages.
+    // Every day counts, also days without a play, otherwise a rare song would look more frequent than it is.
+    $weekday_days = array_fill(0, 7, 0.0);
+    $observed_days = 0.0;
+    $plays_before_today = 0;
+    if ($first_ts) {
+        $d = new DateTime(substr($first_ts, 0, 10));
+        $end = new DateTime($today_iso);
+        for (; $d < $end; $d->modify('+1 day')) {
+            $key = $d->format('Y-m-d');
+            $coverage = slot_coverage($key);
+            $weekday_days[((int)$d->format('N')) - 1] += $coverage;
+            $observed_days += $coverage;
+            $plays_before_today += $by_day[$key] ?? 0;
+        }
+    }
+    $average_weekdays = [];
+    for ($i = 0; $i < 7; $i++) {
+        $average_weekdays[] = $weekday_days[$i] > 0 ? $weekday_plays[$i] / $weekday_days[$i] : 0;
+    }
+
+    // Last 30 days including today, zero-filled
+    $timeline = [];
+    for ($i = 29; $i >= 0; $i--) {
+        $date = new DateTime();
+        $date->modify("-{$i} days");
+        $key = $date->format('Y-m-d');
+        $timeline[$key] = $by_day[$key] ?? 0;
+    }
+
+    return [
+        'artist' => $artist,
+        'song' => $song,
+        'total' => count($rows),
+        'unique_stations' => count($stations),
+        'first_timestamp' => $first_ts,
+        'last_timestamp' => $last_ts,
+        'last_station' => $rows ? $rows[0]['station'] : null,
+        'average_per_day' => $observed_days > 0 ? round($plays_before_today / $observed_days, 2) : null,
+        'stations' => [
+            'labels' => array_map('strval', array_keys($stations)),
+            'data' => array_values($stations)
+        ],
+        'hours' => [
+            'labels' => array_map(fn($h) => sprintf('%02d:00', $h), range(0, 23)),
+            'data' => $hours
+        ],
+        'weekdays' => [
+            'labels' => ['Ma', 'Di', 'Wo', 'Do', 'Vr', 'Za', 'Zo'],
+            'data' => $average_weekdays
+        ],
+        'timeline' => [
+            'labels' => array_map(function($k) {
+                $dt = DateTime::createFromFormat('Y-m-d', $k);
+                return $dt ? strtolower($dt->format('j M')) : $k;
+            }, array_keys($timeline)),
+            'data' => array_values($timeline)
+        ],
+        'recent' => array_map(fn($r) => ['station' => $r['station'], 'timestamp_raw' => $r['timestamp']], array_slice($rows, 0, 10))
+    ];
+}
+
 function day_data($date) {
     $pdo = get_db_connection();
 
@@ -1050,6 +1147,16 @@ if (preg_match('#/api\.php/api/([^/]+)(?:/(.+))?#', $request_uri, $matches)) {
                 }
             } else {
                 echo json_encode(['error' => 'Invalid song endpoint']);
+            }
+            break;
+
+        case 'tracked':
+            $tracked_artist = trim($_GET['artist'] ?? '');
+            $tracked_song = trim($_GET['song'] ?? '');
+            if ($tracked_artist === '' || $tracked_song === '') {
+                echo json_encode(['error' => 'artist and song are required']);
+            } else {
+                echo json_encode(tracked_overview($tracked_artist, $tracked_song));
             }
             break;
 
