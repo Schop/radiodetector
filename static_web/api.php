@@ -4,8 +4,14 @@
  * Serves JSON data for the static frontend
  */
 
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
+// Pages (e.g. index.php) can define RADIO_API_LIBRARY and require this file to reuse the data
+// functions below; in that mode no JSON headers are sent and no endpoint is served.
+$api_standalone = !defined('RADIO_API_LIBRARY');
+
+if ($api_standalone) {
+    header('Content-Type: application/json');
+    header('Access-Control-Allow-Origin: *');
+}
 
 // absolute path to the SQLite DB (ensure PHP uses the same file you inspect locally)
 $db_path = 'radio_songs.db';
@@ -55,7 +61,7 @@ function get_song_count() {
 }
 
 // Lightweight endpoint for song count polling
-if (isset($_GET['song_count']) && $_GET['song_count'] == '1') {
+if ($api_standalone && isset($_GET['song_count']) && $_GET['song_count'] == '1') {
     $result = get_song_count();
     if (is_array($result)) {
         echo json_encode($result);
@@ -66,7 +72,7 @@ if (isset($_GET['song_count']) && $_GET['song_count'] == '1') {
 }
 
 // DB health/info endpoint (for debugging)
-if (isset($_GET['db_info']) && $_GET['db_info'] == '1') {
+if ($api_standalone && isset($_GET['db_info']) && $_GET['db_info'] == '1') {
     $dbInfo = ['db_path' => $db_path, 'exists' => file_exists($db_path)];
     if ($dbInfo['exists']) {
         $dbInfo['realpath'] = realpath($db_path);
@@ -1098,7 +1104,7 @@ function day_charts($date) {
 
 // Route handling
 $request_uri = parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
-if (preg_match('#/api\.php/api/([^/]+)(?:/(.+))?#', $request_uri, $matches)) {
+if ($api_standalone && preg_match('#/api\.php/api/([^/]+)(?:/(.+))?#', $request_uri, $matches)) {
     $endpoint = $matches[1];
     $action = $matches[2] ?? '';
     
@@ -1184,5 +1190,7 @@ if (preg_match('#/api\.php/api/([^/]+)(?:/(.+))?#', $request_uri, $matches)) {
     exit;
 }
 
-echo json_encode(['error' => 'Endpoint not found']);
+if ($api_standalone) {
+    echo json_encode(['error' => 'Endpoint not found']);
+}
 ?>

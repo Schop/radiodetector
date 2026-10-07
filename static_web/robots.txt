@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+
+# The JSON data endpoints and the raw database are not meant to be crawled
+Disallow: /api.php
+Disallow: /db_check.php
+Disallow: /radio_songs.db
+
+Sitemap: https://philcollinsdetector.nl/sitemap.xml

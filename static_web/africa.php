@@ -1,4 +1,7 @@
-<?php $page_title = 'Africa van Toto - Phil Collins Detector'; ?>
+<?php
+$page_title = 'Africa van Toto op de Nederlandse radio';
+$page_description = 'Hoe vaak draait Africa van Toto op de Nederlandse radio? Overzicht per zender, uur en weekdag. Geen Phil Collins, wel een klassieker.';
+?>
 <?php include 'includes/head.html'; ?>
 
 <body>

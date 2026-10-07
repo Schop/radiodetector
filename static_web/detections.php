@@ -1,4 +1,7 @@
-<?php $page_title = 'Alle Detecties - Phil Collins Detector'; ?>
+<?php
+$page_title = 'Alle detecties van Phil Collins en Genesis op de radio';
+$page_description = 'Alle gedetecteerde draaibeurten van Phil Collins en Genesis op Nederlandse radiozenders, doorzoekbaar op zender, nummer en tijdstip.';
+?>
 <?php include 'includes/head.html'; ?>
 
 <body>

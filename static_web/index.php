@@ -1,5 +1,53 @@
-<?php $page_title = 'Phil Collins Detector'; ?>
-<?php include 'includes/head.html'; ?>
+<?php
+// Server-side figures: crawlers (and AI search engines) that don't run JavaScript get real numbers
+// instead of '...'. The page script below overwrites the same elements with live values.
+define('RADIO_API_LIBRARY', true);
+require_once __DIR__ . '/api.php';
+require_once __DIR__ . '/includes/seo.php';
+date_default_timezone_set('Europe/Amsterdam');
+
+$seo = null;
+try {
+    $seo = index_data();
+} catch (Throwable $e) {
+    $seo = null; // keep the placeholders; the page script fills them in
+}
+$seo_ok = is_array($seo) && !isset($seo['error']) && !empty($seo['total_count']);
+
+// Figures per artist, from the same rows. 'total_count' mixes Phil Collins and Genesis, so the
+// descriptive text below uses these instead.
+$today_key = (new DateTime('now', new DateTimeZone('Europe/Amsterdam')))->format('Y-m-d');
+$pc = ['total' => 0, 'today' => 0];
+$gen = ['total' => 0, 'today' => 0];
+$pc_top_songs = [];
+$pc_top_stations = [];
+if ($seo_ok) {
+    foreach ($seo['songs'] as $row) {
+        $is_today = strpos($row['timestamp_raw'], $today_key) === 0;
+        if (stripos($row['artist'], 'Phil Collins') === 0) {
+            $pc['total']++;
+            if ($is_today) $pc['today']++;
+            $pc_top_songs[$row['song']] = ($pc_top_songs[$row['song']] ?? 0) + 1;
+            $pc_top_stations[$row['station']] = ($pc_top_stations[$row['station']] ?? 0) + 1;
+        } elseif (strcasecmp($row['artist'], 'Genesis') === 0) {
+            $gen['total']++;
+            if ($is_today) $gen['today']++;
+        }
+    }
+    arsort($pc_top_songs);
+    arsort($pc_top_stations);
+}
+
+$page_title = 'Phil Collins Detector | Live Radio Statistieken & Hits';
+$page_description = 'Hoe vaak is Phil Collins nu op de radio? Bekijk real-time statistieken, recente detecties en de meest gedraaide Genesis hits op Nederlandse radiozenders.';
+if ($seo_ok && $pc['total'] > 0) {
+    $page_description = sprintf(
+        'Phil Collins is al %s keer gedetecteerd op de Nederlandse radio, vandaag %d keer. Bekijk real-time statistieken, recente detecties en de meest gedraaide Genesis hits.',
+        number_format($pc['total'], 0, ',', '.'), $pc['today']
+    );
+}
+include 'includes/head.html';
+?>
 
 <body>
     <div class="container-fluid">
@@ -30,9 +78,9 @@
                                 <small class="d-block mt-2">radiostations checken...</small>
                             </div>
                         </div>
-                        <p>Gemiddeld worden er per uur <strong id="averagePerHour">...</strong>
+                        <p>Gemiddeld worden er per uur <strong id="averagePerHour"><?php echo $seo_ok && $seo['average_per_hour'] !== null ? h(str_replace('.', ',', (string)$seo['average_per_hour'])) : '...'; ?></strong>
                            nummers van Phil Collins gedetecteerd op de Nederlandse radiozenders.</p>
-                        <p>Phil was <strong id="lastSongMinutesAgo">...</strong> minuten geleden nog op de radio bij <span id="lastSongStation">...</span> met het nummer <span id="lastSongTitle">...</span>.</p>
+                        <p>Phil was <strong id="lastSongMinutesAgo"><?php $m = $seo_ok && !empty($seo['songs']) ? minutes_since($seo['songs'][0]['timestamp_raw']) : null; echo $m !== null ? $m : '...'; ?></strong> minuten geleden nog op de radio bij <span id="lastSongStation"><?php echo $seo_ok && !empty($seo['songs']) ? seo_link(station_href($seo['songs'][0]['station']), $seo['songs'][0]['station']) : '...'; ?></span> met het nummer <span id="lastSongTitle"><?php echo $seo_ok && !empty($seo['songs']) ? seo_link(song_href($seo['songs'][0]['song']), $seo['songs'][0]['song']) : '...'; ?></span>.</p>
                     </div>
                 </div>
             </div>
@@ -57,17 +105,17 @@
             <div class="col-md-4 mb-2">
                 <div class="card h-100">
                     <div class="card-body">
-                        <p>Sinds <span id="firstTimestamp">...</span> is Phil Collins <strong id="totalCount">...</strong> keer gedetecteerd,
-                           op <strong id="uniqueStations">...</strong> verschillende radiozenders,
-                           met <strong id="uniqueSongs">...</strong> verschillende nummers.
+                        <p>Sinds <span id="firstTimestamp"><?php echo $seo_ok && !empty($seo['songs']) ? nl_date_short($seo['songs'][count($seo['songs']) - 1]['timestamp_raw']) : '...'; ?></span> is Phil Collins <strong id="totalCount"><?php echo $seo_ok ? h($seo['total_count']) : '...'; ?></strong> keer gedetecteerd,
+                           op <strong id="uniqueStations"><?php echo $seo_ok ? h(count($seo['stations'])) : '...'; ?></strong> verschillende radiozenders,
+                           met <strong id="uniqueSongs"><?php echo $seo_ok ? h(count($seo['song_titles'])) : '...'; ?></strong> verschillende nummers.
                         </p>
-                        <p>Op de dag met de meeste detecties (<span id="mostSongsDay">...</span>)
-                           werden <strong id="mostSongsCount">...</strong> nummers van Phil gedetecteerd.
+                        <p>Op de dag met de meeste detecties (<span id="mostSongsDay"><?php echo $seo_ok && !empty($seo['most_songs_day']['day_iso']) ? seo_link('/day.php?date=' . rawurlencode($seo['most_songs_day']['day_iso']), $seo['most_songs_day']['day']) : '...'; ?></span>)
+                           werden <strong id="mostSongsCount"><?php echo $seo_ok && !empty($seo['most_songs_day']) ? h($seo['most_songs_day']['count']) : '...'; ?></strong> nummers van Phil gedetecteerd.
                         </p>
                         <hr>
-                        <p>De langste onderbreking tussen detecties was <strong id="largestGap">...</strong>. Aan deze periode van rust kwam een einde toen <span id="largestGapEndStation">...</span>
-                           het nummer <span id="largestGapEndSong">...</span>
-                            draaide op <span id="largestGapEndTime">...</span>.</p>
+                        <p>De langste onderbreking tussen detecties was <strong id="largestGap"><?php echo $seo_ok && !empty($seo['largest_gap']['seconds']) ? h($seo['largest_gap']['readable']) : '...'; ?></strong>. Aan deze periode van rust kwam een einde toen <span id="largestGapEndStation"><?php echo $seo_ok && !empty($seo['largest_gap']['end_station']) ? seo_link(station_href($seo['largest_gap']['end_station']), $seo['largest_gap']['end_station']) : '...'; ?></span>
+                           het nummer <span id="largestGapEndSong"><?php echo $seo_ok && !empty($seo['largest_gap']['end_song']) ? seo_link(song_href($seo['largest_gap']['end_song']), $seo['largest_gap']['end_song']) : '...'; ?></span>
+                            draaide op <span id="largestGapEndTime"><?php echo $seo_ok && !empty($seo['largest_gap']['date']) ? seo_link('/day.php?date=' . rawurlencode($seo['largest_gap']['date']), nl_date_short($seo['largest_gap']['date'])) : '...'; ?></span>.</p>
                     </div>
                 </div>
             </div>                      
@@ -143,6 +191,56 @@
             </div>
       
         </div>
+
+
+        <!-- FAQ: answers are rendered on the server from the database, so search engines and AI assistants can read them -->
+        <section class="row mb-4" id="veelgestelde-vragen">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="h4 mb-3">Veelgestelde vragen over Phil Collins op de radio</h2>
+
+                        <h3 class="h6">Hoe vaak is Phil Collins op de Nederlandse radio?</h3>
+                        <p><?php if ($seo_ok && $pc['total'] > 0): ?>
+                            Sinds <?php echo nl_date_short($seo['songs'][count($seo['songs']) - 1]['timestamp_raw']); ?> is een nummer van Phil Collins
+                            <strong><?php echo h(number_format($pc['total'], 0, ',', '.')); ?></strong> keer gedetecteerd
+                            op <?php echo h(count($seo['stations'])); ?> radiozenders, gemiddeld ongeveer
+                            <?php echo h(str_replace('.', ',', (string)$seo['average_per_hour'])); ?> keer per uur voor Phil Collins en Genesis samen.
+                            Vandaag was dat al <strong><?php echo h($pc['today']); ?></strong> keer.
+                        <?php else: ?>De cijfers worden geladen.<?php endif; ?></p>
+
+                        <h3 class="h6">Welk radiostation draait Phil Collins het vaakst?</h3>
+                        <p><?php if ($pc_top_stations): $names = array_keys($pc_top_stations); ?>
+                            Dat is <?php echo seo_link(station_href($names[0]), $names[0]); ?> met
+                            <strong><?php echo h(number_format($pc_top_stations[$names[0]], 0, ',', '.')); ?></strong> detecties<?php
+                            if (count($names) > 1): ?>, gevolgd door <?php echo seo_link(station_href($names[1]), $names[1]); ?>
+                            (<?php echo h(number_format($pc_top_stations[$names[1]], 0, ',', '.')); ?>)<?php
+                            endif;
+                            if (count($names) > 2): ?> en <?php echo seo_link(station_href($names[2]), $names[2]); ?>
+                            (<?php echo h(number_format($pc_top_stations[$names[2]], 0, ',', '.')); ?>)<?php endif; ?>.
+                        <?php else: ?>De cijfers worden geladen.<?php endif; ?></p>
+
+                        <h3 class="h6">Wat is het meest gedraaide Phil Collins-nummer op de Nederlandse radio?</h3>
+                        <p><?php if ($pc_top_songs): $titles = array_keys($pc_top_songs); ?>
+                            Het meest gedraaide nummer is <?php echo seo_link(song_href($titles[0]), $titles[0]); ?> met
+                            <strong><?php echo h(number_format($pc_top_songs[$titles[0]], 0, ',', '.')); ?></strong> keer<?php
+                            if (count($titles) > 1): ?>, gevolgd door <?php echo seo_link(song_href($titles[1]), $titles[1]); ?>
+                            (<?php echo h(number_format($pc_top_songs[$titles[1]], 0, ',', '.')); ?>)<?php endif; ?>.
+                        <?php else: ?>De cijfers worden geladen.<?php endif; ?></p>
+
+                        <h3 class="h6">Worden Genesis-nummers ook bijgehouden?</h3>
+                        <p>Ja. Naast Phil Collins (inclusief duetten als &lsquo;Easy Lover&rsquo; met Philip Bailey) telt de detector ook Genesis.
+                            <?php if ($seo_ok && $gen['total'] > 0): ?>Genesis is <strong><?php echo h(number_format($gen['total'], 0, ',', '.')); ?></strong> keer gedetecteerd,
+                            vandaag <?php echo h($gen['today']); ?> keer.<?php endif; ?></p>
+
+                        <h3 class="h6">Hoe werkt de Phil Collins Detector?</h3>
+                        <p>Een kleine computer in een garage controleert elke minuut de &lsquo;nu aan het spelen&rsquo;-informatie van Nederlandse radiozenders
+                            en legt vast wanneer er een nummer van Phil Collins of Genesis voorbijkomt. Lees meer op de pagina
+                            <a href="about.php" class="text-decoration-none">Over / FAQs</a>.</p>
+                    </div>
+                </div>
+            </div>
+        </section>
 
         <?php
         // front page only: a quiet link to the Toto - Africa side project

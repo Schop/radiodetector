@@ -1,4 +1,7 @@
-<?php $page_title = '{stationName} - Phil Collins Detector'; ?>
+<?php
+$page_title = '{stationName} - Phil Collins Detector';
+$page_description = 'Hoe vaak draait deze radiozender Phil Collins en Genesis? Bekijk de detecties, populairste nummers en draaitijden per uur en per weekdag.';
+?>
 <?php include 'includes/head.html'; ?>
 
 <body>

@@ -1,4 +1,7 @@
-<?php $page_title = '{songName} - Phil Collins Detector'; ?>
+<?php
+$page_title = '{songName} - Phil Collins Detector';
+$page_description = 'Hoe vaak is dit nummer op de Nederlandse radio gedraaid? Bekijk de detecties per zender, per uur en per weekdag.';
+?>
 <?php include 'includes/head.html'; ?>
 
 <body>

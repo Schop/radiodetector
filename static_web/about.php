@@ -1,4 +1,7 @@
-<?php $page_title = 'Over de Phil Collins Detector'; ?>
+<?php
+$page_title = 'Over de Phil Collins Detector | Hoe werkt het?';
+$page_description = 'Hoe vaak komt Phil Collins voorbij op de Nederlandse radio? Lees hoe de Phil Collins Detector now-playing informatie van radiozenders bijhoudt en telt.';
+?>
 <?php include 'includes/head.html'; ?>
 <body>
     <div class="container-fluid">

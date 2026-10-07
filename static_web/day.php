@@ -1,4 +1,7 @@
-<?php $page_title = '{date} - Phil Collins Detector'; ?>
+<?php
+$page_title = '{date} - Phil Collins Detector';
+$page_description = 'Alle detecties van Phil Collins en Genesis op de Nederlandse radio op een enkele dag.';
+?>
 <?php include 'includes/head.html'; ?>
 
 <body>
