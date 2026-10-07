@@ -510,6 +510,65 @@ def fetch_veronica_from_mediahuis():
         log_print(f"Error fetching Radio Veronica from mediahuisradio.nl: {e}", Fore.YELLOW)
         return None
 
+# DPG Media stations (JOE, Q-music) get their songs from a shared real-time server (SockJS).
+# We join the "plays" feed with backlog=1 over SockJS's plain-HTTP transport, which returns the latest play.
+DPG_SOCKET_URL = 'https://socket.qmusic.nl/api'
+DPG_SOCKET_STATIONS = {
+    'JOE': 'joe_nl',
+    'Q Music': 'qmusic_nl',
+}
+DPG_MAX_AGE = timedelta(minutes=30)  # songs are 3-5 min apart; older than this means the feed is stale
+
+def fetch_station_from_dpg_socket(station_name, station_key):
+    """Fetch the latest play from DPG Media's real-time plays feed (the broadcaster's feed)"""
+    try:
+        import json
+        import random
+        import string
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        session_id = ''.join(random.choices(string.ascii_lowercase + string.digits, k=8))
+        base = f"{DPG_SOCKET_URL}/{random.randint(100, 999)}/{session_id}"
+
+        with requests.Session() as http:
+            http.headers.update(headers)
+            if not http.post(f"{base}/xhr", timeout=(5, 10)).text.startswith('o'):
+                return None  # no SockJS "open" frame
+            join = {"action": "join", "id": 0,
+                    "sub": {"station": station_key, "entity": "plays", "action": "play"}, "backlog": 1}
+            http.post(f"{base}/xhr_send", data=json.dumps([json.dumps(join)]), timeout=(5, 10))
+
+            play = None
+            deadline = time.time() + 10
+            while play is None and time.time() < deadline:
+                text = http.post(f"{base}/xhr", timeout=(5, 10)).text
+                if not text.startswith('a['):
+                    continue  # heartbeat frame, keep polling
+                for frame in json.loads(text[1:]):
+                    message = json.loads(frame)
+                    if message.get('action') == 'data':
+                        play = json.loads(message['data']).get('data')
+        if not play:
+            return None
+
+        artist = play.get('artist')
+        artist = (artist.get('name') if isinstance(artist, dict) else artist) or ''
+        artist, title = artist.strip(), (play.get('title') or '').strip()
+        if not artist or not title:
+            return None
+
+        # played_at carries a UTC offset
+        try:
+            played_at = datetime.fromisoformat(play['played_at'])
+            if datetime.now(played_at.tzinfo) - played_at > DPG_MAX_AGE:
+                return None  # feed looks stale, let the other sources handle it
+        except (KeyError, TypeError, ValueError):
+            pass
+        return (artist, title)
+
+    except Exception as e:
+        log_print(f"Error fetching {station_name} from the DPG plays feed: {e}", Fore.YELLOW)
+        return None
+
 def fetch_arrow_from_arrow_nl():
     """Fetch current song from arrow.nl's own now-playing API (the broadcaster's feed)"""
     try:
@@ -752,6 +811,13 @@ def main():
                 result = fetch_veronica_from_mediahuis()
                 if result:
                     stations_data[veronica_name] = (result[0], result[1], 'mediahuisradio.nl')
+
+            # DPG Media stations (JOE, Q-music): their own real-time plays feed
+            for dpg_name, station_key in DPG_SOCKET_STATIONS.items():
+                if dpg_name in RELISTEN_STATIONS or dpg_name in ALL_MYONLINERADIO_STATIONS or dpg_name in ALL_PLAYLIST24_STATIONS:
+                    result = fetch_station_from_dpg_socket(dpg_name, station_key)
+                    if result:
+                        stations_data[dpg_name] = (result[0], result[1], 'socket.qmusic.nl')
 
             # PRIORITY STATIONS: Fetch from myonlineradio FIRST for stations that need it
             # (e.g., Radio 538 which is not reliably on relisten.nl homepage)
