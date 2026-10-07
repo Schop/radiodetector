@@ -449,6 +449,7 @@ TALPA_PLAYLIST_PAGES = {
     '538': 'https://www.538.nl/playlist/radio-538',
     'Sky Radio': 'https://www.skyradio.nl/playlist/sky-radio',
     'Radio 10': 'https://www.radio10.nl/playlist/radio-10',
+    'Radio Noordzee': 'https://www.radionoordzee.nl/playlist/radio-noordzee',
 }
 TALPA_MAX_AGE = timedelta(minutes=30)  # plays are 3-17 min apart; older than this means the feed is stale
 
@@ -491,11 +492,19 @@ def fetch_station_from_talpa(station_name, url):
         log_print(f"Error fetching {station_name} from its own playlist page: {e}", Fore.YELLOW)
         return None
 
-def fetch_veronica_from_mediahuis():
+# Mediahuis Radio brands share one now-playing API (it has no timestamp, so no staleness check is possible)
+MEDIAHUIS_STATIONS = {
+    'Radio Veronica': 'veronica',
+    'SLAM!': 'slam',
+    '100% NL': '100pnl',
+    'Sublime FM': 'sublime',
+}
+
+def fetch_station_from_mediahuis(station_name, station_key):
     """Fetch current song from Mediahuis Radio's now-playing API (the broadcaster's feed)"""
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        response = requests.get('https://api.mediahuisradio.nl/api/nowplaying', params={'stationKey': 'veronica'},
+        response = requests.get('https://api.mediahuisradio.nl/api/nowplaying', params={'stationKey': station_key},
                                 timeout=15, headers=headers)
         response.raise_for_status()
         data = response.json()
@@ -503,11 +512,32 @@ def fetch_veronica_from_mediahuis():
         artist = (data.get('artist') or '').strip()
         title = (data.get('title') or '').strip()
         if not artist or not title:
+            return None  # e.g. an ad break or an unknown station key
+        return (artist, title)
+
+    except Exception as e:
+        log_print(f"Error fetching {station_name} from mediahuisradio.nl: {e}", Fore.YELLOW)
+        return None
+
+def fetch_radionl_from_site():
+    """Fetch current song from radionl.fm's own playlist page (the 'Nu op RADIONL' block)"""
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get('https://radionl.fm/playlist', timeout=15, headers=headers)
+        response.raise_for_status()
+        soup = BeautifulSoup(response.text, 'html.parser')
+
+        artist_tag = soup.find(attrs={'data-np-artist': True})
+        title_tag = soup.find(attrs={'data-np-title': True})
+        if not artist_tag or not title_tag:
+            return None
+        artist, title = artist_tag.get_text(strip=True), title_tag.get_text(strip=True)
+        if not artist or not title:
             return None
         return (artist, title)
 
     except Exception as e:
-        log_print(f"Error fetching Radio Veronica from mediahuisradio.nl: {e}", Fore.YELLOW)
+        log_print(f"Error fetching RadioNL from radionl.fm: {e}", Fore.YELLOW)
         return None
 
 # DPG Media stations (JOE, Q-music) get their songs from a shared real-time server (SockJS).
@@ -798,19 +828,26 @@ def main():
                     if result:
                         stations_data[npo_name] = (result[0], result[1], f'{site}.nl')
 
-            # Talpa stations (538, Sky Radio, Radio 10): their own playlist pages
+            # Talpa stations (538, Sky Radio, Radio 10, Radio Noordzee): their own playlist pages
             for talpa_name, page_url in TALPA_PLAYLIST_PAGES.items():
                 if talpa_name in RELISTEN_STATIONS or talpa_name in ALL_MYONLINERADIO_STATIONS or talpa_name in ALL_PLAYLIST24_STATIONS:
                     result = fetch_station_from_talpa(talpa_name, page_url)
                     if result:
                         stations_data[talpa_name] = (result[0], result[1], page_url.split('/')[2].removeprefix('www.'))
 
-            # Radio Veronica (Mediahuis Radio): its own now-playing API
-            veronica_name = 'Radio Veronica'
-            if veronica_name in RELISTEN_STATIONS or veronica_name in ALL_MYONLINERADIO_STATIONS or veronica_name in ALL_PLAYLIST24_STATIONS:
-                result = fetch_veronica_from_mediahuis()
+            # Mediahuis Radio stations (Veronica, SLAM!, 100% NL, Sublime FM): their own now-playing API
+            for mh_name, station_key in MEDIAHUIS_STATIONS.items():
+                if mh_name in RELISTEN_STATIONS or mh_name in ALL_MYONLINERADIO_STATIONS or mh_name in ALL_PLAYLIST24_STATIONS:
+                    result = fetch_station_from_mediahuis(mh_name, station_key)
+                    if result:
+                        stations_data[mh_name] = (result[0], result[1], 'mediahuisradio.nl')
+
+            # RadioNL: its own playlist page
+            radionl_name = 'RadioNL'
+            if radionl_name in RELISTEN_STATIONS or radionl_name in ALL_MYONLINERADIO_STATIONS or radionl_name in ALL_PLAYLIST24_STATIONS:
+                result = fetch_radionl_from_site()
                 if result:
-                    stations_data[veronica_name] = (result[0], result[1], 'mediahuisradio.nl')
+                    stations_data[radionl_name] = (result[0], result[1], 'radionl.fm')
 
             # DPG Media stations (JOE, Q-music): their own real-time plays feed
             for dpg_name, station_key in DPG_SOCKET_STATIONS.items():
