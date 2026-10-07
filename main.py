@@ -75,6 +75,7 @@ def migrate_database():
             settings_to_migrate = [
                 ('target_artists', json.dumps(config.get('target_artists', []))),
                 ('target_songs', json.dumps(config.get('target_songs', []))),
+                ('tracked_songs', json.dumps(config.get('tracked_songs', []))),
                 ('priority_myonlineradio', json.dumps(config.get('priority_myonlineradio', [])))
             ]
             
@@ -129,7 +130,7 @@ def load_station_config():
     config = {}
     
     # Load simple settings from settings table
-    settings_keys = ['target_artists', 'target_songs', 'priority_myonlineradio']
+    settings_keys = ['target_artists', 'target_songs', 'tracked_songs', 'priority_myonlineradio']
     
     for key in settings_keys:
         db.execute_query(c, "SELECT value FROM settings WHERE key = ?", (key,), db_type)
@@ -163,7 +164,7 @@ def load_station_config():
 
 def reload_settings():
     """Reload settings from database and update global variables"""
-    global TARGET_ARTISTS, TARGET_SONGS, PRIORITY_MYONLINERADIO
+    global TARGET_ARTISTS, TARGET_SONGS, TRACKED_SONGS, PRIORITY_MYONLINERADIO
     global RELISTEN_STATIONS, ALL_MYONLINERADIO_STATIONS, ALL_PLAYLIST24_STATIONS
     global MYONLINERADIO_STATIONS, PLAYLIST24_STATIONS
     
@@ -171,6 +172,7 @@ def reload_settings():
     
     TARGET_ARTISTS = config.get('target_artists', [])
     TARGET_SONGS = config.get('target_songs', [])
+    TRACKED_SONGS = config.get('tracked_songs', [])
     PRIORITY_MYONLINERADIO = config.get('priority_myonlineradio', [])
     RELISTEN_STATIONS = {str(k): v for k, v in config.get('relisten', {}).items()}
     ALL_MYONLINERADIO_STATIONS = config.get('myonlineradio', {})
@@ -197,6 +199,7 @@ STATION_CONFIG = load_station_config()
 # Load target artists and songs from config
 TARGET_ARTISTS = STATION_CONFIG.get('target_artists', [])
 TARGET_SONGS = STATION_CONFIG.get('target_songs', [])
+TRACKED_SONGS = STATION_CONFIG.get('tracked_songs', [])
 PRIORITY_MYONLINERADIO = STATION_CONFIG.get('priority_myonlineradio', [])
 RELISTEN_STATIONS = {str(k): v for k, v in STATION_CONFIG.get('relisten', {}).items()}
 ALL_MYONLINERADIO_STATIONS = STATION_CONFIG.get('myonlineradio', {})
@@ -243,14 +246,44 @@ def normalize_song_title(title):
 # Stations whose sources sometimes report "title - artist" instead of "artist - title"
 SWAPPED_ORDER_STATIONS = {'JOE'}
 
+def parse_target_song(entry):
+    """'Toto - Africa' -> ('toto', 'africa'); a plain 'Africa' -> (None, 'africa') matches any artist"""
+    if ' - ' in entry:
+        artist, title = entry.split(' - ', 1)
+        return artist.strip().lower(), title.strip().lower()
+    return None, entry.strip().lower()
+
+def matches_song_list(entries, artist, song):
+    """True if artist/song (already normalized) match an entry; 'Artist - Title' entries need both"""
+    for entry in entries:
+        if not entry:
+            continue
+        target_artist, target_title = parse_target_song(entry)
+        if target_title and target_title in song.lower() and (target_artist is None or target_artist == artist.lower()):
+            return True
+    return False
+
 def matches_target(artist, song):
-    """True if the artist or song matches a configured target (artist/song already normalized)"""
+    """True if the artist or song matches a configured target or tracked song (artist/song already normalized)"""
     for target_artist in TARGET_ARTISTS:
         if target_artist == "Phil Collins" and target_artist.lower() in artist.lower():
             return True
         if target_artist == "Genesis" and target_artist.lower() == artist.lower():
             return True
-    return any(t and t.lower() in song.lower() for t in TARGET_SONGS)
+    return matches_song_list(TARGET_SONGS, artist, song) or matches_song_list(TRACKED_SONGS, artist, song)
+
+def upload_database():
+    """Upload the database to the web server (non-fatal)"""
+    try:
+        import subprocess
+        result = subprocess.run(['python3', 'upload_db.py'],
+                                capture_output=True, text=True, timeout=30)
+        if result.returncode == 0:
+            log_print(f"✓ Database uploaded to web server", Fore.GREEN)
+        else:
+            log_print(f"⚠️ Database upload failed: {result.stderr.strip()}", Fore.YELLOW)
+    except Exception as e:
+        log_print(f"⚠️ Database upload error: {e}", Fore.YELLOW)
 
 def create_song_key(artist, song):
     """Create a normalized key for song comparison to handle different orderings"""
@@ -784,6 +817,7 @@ def main():
         log_print(f"- Prioritizing myonlineradio for: {', '.join(PRIORITY_MYONLINERADIO)}")
     log_print(f"- Target artists: {', '.join(TARGET_ARTISTS) if TARGET_ARTISTS else 'None'}")
     log_print(f"- Target songs: {', '.join(TARGET_SONGS) if TARGET_SONGS else 'None'}")
+    log_print(f"- Tracked songs (separate table): {', '.join(TRACKED_SONGS) if TRACKED_SONGS else 'None'}")
     log_print("=" * 60)
     
     # Create database cursor
@@ -947,6 +981,16 @@ def main():
                         last_songs[station] = song_key
                         songs_changed += 1
 
+                        # Side-project songs (e.g. Toto - Africa) go to their own table, so they
+                        # never show up in the Phil Collins / Genesis statistics
+                        if matches_song_list(TRACKED_SONGS, normalized_artist, normalized_song):
+                            db.execute_query(c, "INSERT INTO tracked_songs (station, song, artist, timestamp) VALUES (?, ?, ?, ?)",
+                                      (station, normalized_song, normalized_artist, datetime.now().isoformat()), db_type)
+                            conn.commit()
+                            log_print(f"[{ts}] {station}: {normalized_song_info} (tracked, via {source})", Fore.MAGENTA)
+                            upload_database()
+                            continue
+
                         # Check if artist is in target list
                         matched = False
                         for target_artist in TARGET_ARTISTS:
@@ -962,12 +1006,9 @@ def main():
                                 matched = True
                                 break
 
-                        # Check if song is in target list (using normalized song title)
+                        # Check if song is in target list ('Artist - Title' entries must match the artist too)
                         if not matched:
-                            for target_song in TARGET_SONGS:
-                                if target_song and target_song.lower() in normalized_song.lower():
-                                    matched = True
-                                    break
+                            matched = matches_song_list(TARGET_SONGS, normalized_artist, normalized_song)
 
                         # Log to database and print if matched
                         if matched:
@@ -981,16 +1022,7 @@ def main():
                             log_print(f"[{ts}] {station}: {normalized_song_info} (via {source})", Fore.RED, Style.BRIGHT)
 
                             # Upload database to web server after new detection
-                            try:
-                                import subprocess
-                                result = subprocess.run(['python3', 'upload_db.py'], 
-                                                      capture_output=True, text=True, timeout=30)
-                                if result.returncode == 0:
-                                    log_print(f"✓ Database uploaded to web server", Fore.GREEN)
-                                else:
-                                    log_print(f"⚠️ Database upload failed: {result.stderr.strip()}", Fore.YELLOW)
-                            except Exception as e:
-                                log_print(f"⚠️ Database upload error: {e}", Fore.YELLOW)
+                            upload_database()
                             log_print("=" * 60, Fore.RED, Style.BRIGHT)
                             # Beep to alert user (works on Windows and Linux)
                             print('\a', end='', flush=True)

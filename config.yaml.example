@@ -30,7 +30,12 @@ target_artists:
   - Genesis
 
 target_songs:
-  - Africa
+  # Matched on the title only, or as "Artist - Title" to require both. These go into the main statistics.
+
+# Side-project songs: logged to their own table (tracked_songs), never in the main statistics.
+# Use "Artist - Title" so covers and songs like "Waka Waka (This Time For Africa)" don't match.
+tracked_songs:
+  - Toto - Africa
 
 # Stations that should prioritize myonlineradio (e.g., due to relisten.nl homepage rotation)
 priority_myonlineradio:

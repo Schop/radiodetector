@@ -159,6 +159,16 @@ def init_database():
             INDEX idx_timestamp (timestamp)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
         
+        # Side-project songs (e.g. Toto - Africa), kept apart from the main statistics
+        c.execute('''CREATE TABLE IF NOT EXISTS tracked_songs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            station VARCHAR(255),
+            song TEXT,
+            artist VARCHAR(255),
+            timestamp VARCHAR(50),
+            INDEX idx_tracked_timestamp (timestamp)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4''')
+
         c.execute('''CREATE TABLE IF NOT EXISTS settings (
             `key` VARCHAR(255) PRIMARY KEY,
             value TEXT,
@@ -185,6 +195,15 @@ def init_database():
             timestamp TEXT
         )''')
         
+        # Side-project songs (e.g. Toto - Africa), kept apart from the main statistics
+        c.execute('''CREATE TABLE IF NOT EXISTS tracked_songs (
+            id INTEGER PRIMARY KEY,
+            station TEXT,
+            song TEXT,
+            artist TEXT,
+            timestamp TEXT
+        )''')
+
         c.execute('''CREATE TABLE IF NOT EXISTS settings (
             key TEXT PRIMARY KEY,
             value TEXT,
