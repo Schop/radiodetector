@@ -444,6 +444,72 @@ def fetch_station_from_npo(site):
         log_print(f"Error fetching {site} from its NPO API: {e}", Fore.YELLOW)
         return None
 
+# Talpa stations embed their last ~24 hours of plays in their playlist page (Next.js page data)
+TALPA_PLAYLIST_PAGES = {
+    '538': 'https://www.538.nl/playlist/radio-538',
+    'Sky Radio': 'https://www.skyradio.nl/playlist/sky-radio',
+    'Radio 10': 'https://www.radio10.nl/playlist/radio-10',
+}
+TALPA_MAX_AGE = timedelta(minutes=30)  # plays are 3-17 min apart; older than this means the feed is stale
+
+def fetch_station_from_talpa(station_name, url):
+    """Fetch current song from a Talpa station's own playlist page (the broadcaster's feed)"""
+    try:
+        import json
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(url, timeout=15, headers=headers)
+        response.raise_for_status()
+
+        match = re.search(r'<script id="__NEXT_DATA__"[^>]*>(.*?)</script>', response.text, re.S)
+        if not match:
+            return None
+        groups = json.loads(match.group(1))['props']['pageProps']['initialPlaylist']
+
+        # broadcastDate is UTC; "show" items are programme blocks, not songs
+        now = datetime.now(ZoneInfo('UTC'))
+        plays = []
+        for group in groups:
+            for item in group:
+                if item.get('type') != 'playout':
+                    continue
+                try:
+                    started = datetime.fromisoformat(item['broadcastDate'].replace('Z', '+00:00'))
+                except (KeyError, ValueError):
+                    continue
+                track = item.get('track') or {}
+                if started <= now and (track.get('artistName') or '').strip() and (track.get('title') or '').strip():
+                    plays.append((started, track))
+        if not plays:
+            return None
+
+        started, track = max(plays, key=lambda p: p[0])
+        if now - started > TALPA_MAX_AGE:
+            return None  # feed looks stale, let the other sources handle it
+        return (track['artistName'].strip(), track['title'].strip())
+
+    except Exception as e:
+        log_print(f"Error fetching {station_name} from its own playlist page: {e}", Fore.YELLOW)
+        return None
+
+def fetch_veronica_from_mediahuis():
+    """Fetch current song from Mediahuis Radio's now-playing API (the broadcaster's feed)"""
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get('https://api.mediahuisradio.nl/api/nowplaying', params={'stationKey': 'veronica'},
+                                timeout=15, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        artist = (data.get('artist') or '').strip()
+        title = (data.get('title') or '').strip()
+        if not artist or not title:
+            return None
+        return (artist, title)
+
+    except Exception as e:
+        log_print(f"Error fetching Radio Veronica from mediahuisradio.nl: {e}", Fore.YELLOW)
+        return None
+
 def fetch_arrow_from_arrow_nl():
     """Fetch current song from arrow.nl's own now-playing API (the broadcaster's feed)"""
     try:
@@ -672,6 +738,20 @@ def main():
                     result = fetch_station_from_npo(site)
                     if result:
                         stations_data[npo_name] = (result[0], result[1], f'{site}.nl')
+
+            # Talpa stations (538, Sky Radio, Radio 10): their own playlist pages
+            for talpa_name, page_url in TALPA_PLAYLIST_PAGES.items():
+                if talpa_name in RELISTEN_STATIONS or talpa_name in ALL_MYONLINERADIO_STATIONS or talpa_name in ALL_PLAYLIST24_STATIONS:
+                    result = fetch_station_from_talpa(talpa_name, page_url)
+                    if result:
+                        stations_data[talpa_name] = (result[0], result[1], page_url.split('/')[2].removeprefix('www.'))
+
+            # Radio Veronica (Mediahuis Radio): its own now-playing API
+            veronica_name = 'Radio Veronica'
+            if veronica_name in RELISTEN_STATIONS or veronica_name in ALL_MYONLINERADIO_STATIONS or veronica_name in ALL_PLAYLIST24_STATIONS:
+                result = fetch_veronica_from_mediahuis()
+                if result:
+                    stations_data[veronica_name] = (result[0], result[1], 'mediahuisradio.nl')
 
             # PRIORITY STATIONS: Fetch from myonlineradio FIRST for stations that need it
             # (e.g., Radio 538 which is not reliably on relisten.nl homepage)
