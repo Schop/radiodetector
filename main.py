@@ -573,6 +573,95 @@ def fetch_radionl_from_site():
         log_print(f"Error fetching RadioNL from radionl.fm: {e}", Fore.YELLOW)
         return None
 
+# Radio 8FM runs its own WordPress site; its player polls this open endpoint for the current song
+RADIO8FM_URL = 'https://www.radio8fm.nl/wp-json/r8fm/v1/latest'
+RADIO8FM_MAX_AGE = timedelta(minutes=30)  # songs are 3-5 min apart; older than this means the feed is stale
+
+def fetch_radio8fm():
+    """Fetch current song from Radio 8FM's own now-playing endpoint (the broadcaster's feed)"""
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
+        response = requests.get(RADIO8FM_URL, timeout=15, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        artist = (data.get('artist') or '').strip()
+        title = (data.get('title') or '').strip()
+        if not artist or not title:
+            return None
+
+        # "timestamp" is when the song started, in Amsterdam local time
+        try:
+            started = datetime.strptime(data['timestamp'], '%Y-%m-%d %H:%M:%S')
+            now = datetime.now(ZoneInfo('Europe/Amsterdam')).replace(tzinfo=None)
+            if now - started > RADIO8FM_MAX_AGE:
+                return None  # feed looks stale, let the fallback handle it
+        except (KeyError, TypeError, ValueError):
+            pass
+        return (artist, title)
+
+    except Exception as e:
+        log_print(f"Error fetching Radio 8FM from radio8fm.nl: {e}", Fore.YELLOW)
+        return None
+
+# Fallback for stations without a usable feed of their own: wathoorjewaar.nl lists the latest plays of an
+# artist across all stations. Only target artists are covered, which is all we store anyway. Its robots.txt
+# allows /artist/ pages; we poll gently (at most once per WATHOORJEWAAR_MIN_INTERVAL per artist page).
+WATHOORJEWAAR_ARTIST_PAGES = {
+    'Phil Collins': 'https://www.wathoorjewaar.nl/artist/phil-collins/',
+    'Genesis': 'https://www.wathoorjewaar.nl/artist/genesis/',
+}
+WATHOORJEWAAR_STATIONS = {'Radio 8FM': 'Radio 8FM'}  # our station name -> the name they use
+WATHOORJEWAAR_MIN_INTERVAL = 240  # seconds
+WATHOORJEWAAR_MAX_AGE = timedelta(minutes=20)  # a play older than this is not "current"; the live loop would have seen it
+WATHOORJEWAAR_HEADERS = {'User-Agent': 'Mozilla/5.0 (compatible; PhilCollinsDetector/1.0; +https://philcollinsdetector.nl)'}
+_wathoorjewaar_state = {'fetched_at': 0.0, 'plays': []}
+
+def fetch_recent_plays_from_wathoorjewaar():
+    """[(started naive Amsterdam datetime, artist, title, station)] for the target artists, newest first.
+    Cached for WATHOORJEWAAR_MIN_INTERVAL so the main loop can call this every cycle."""
+    if time.time() - _wathoorjewaar_state['fetched_at'] < WATHOORJEWAAR_MIN_INTERVAL:
+        return _wathoorjewaar_state['plays']
+    _wathoorjewaar_state['fetched_at'] = time.time()  # also throttles retries after an error
+
+    plays = []
+    now = datetime.now(ZoneInfo('Europe/Amsterdam')).replace(tzinfo=None)
+    for artist, url in WATHOORJEWAAR_ARTIST_PAGES.items():
+        try:
+            response = requests.get(url, timeout=15, headers=WATHOORJEWAAR_HEADERS)
+            response.raise_for_status()
+            soup = BeautifulSoup(response.text, 'html.parser')
+            for table in soup.find_all('table'):
+                for row in table.find_all('tr')[1:]:
+                    cells = [td.get_text(' ', strip=True) for td in row.find_all('td')]
+                    if len(cells) != 3:
+                        continue
+                    try:
+                        # "09-10 09:05" = day-month hour:minute, no year
+                        started = datetime.strptime(f"{now.year}-{cells[0]}", '%Y-%d-%m %H:%M')
+                    except ValueError:
+                        continue
+                    if started > now + timedelta(days=1):
+                        started = started.replace(year=now.year - 1)  # 31-12 read on 01-01
+                    title = cells[1].replace('’', "'").replace('‘', "'")  # we store straight apostrophes
+                    plays.append((started, artist, title, cells[2]))
+        except Exception as e:
+            log_print(f"Error fetching {artist} plays from wathoorjewaar.nl: {e}", Fore.YELLOW)
+    plays.sort(key=lambda p: p[0], reverse=True)
+    _wathoorjewaar_state['plays'] = plays
+    return plays
+
+def fetch_station_from_wathoorjewaar(station_name):
+    """Newest recent play of a target artist on this station, if it is recent enough to be 'current'"""
+    their_name = WATHOORJEWAAR_STATIONS.get(station_name)
+    if not their_name:
+        return None
+    now = datetime.now(ZoneInfo('Europe/Amsterdam')).replace(tzinfo=None)
+    for started, artist, title, station in fetch_recent_plays_from_wathoorjewaar():
+        if station == their_name and now - started <= WATHOORJEWAAR_MAX_AGE:
+            return (artist, title)
+    return None
+
 # DPG Media stations (JOE, Q-music) get their songs from a shared real-time server (SockJS).
 # We join the "plays" feed with backlog=1 over SockJS's plain-HTTP transport, which returns the latest play.
 DPG_SOCKET_URL = 'https://socket.qmusic.nl/api'
@@ -882,6 +971,17 @@ def main():
                 result = fetch_radionl_from_site()
                 if result:
                     stations_data[radionl_name] = (result[0], result[1], 'radionl.fm')
+
+            # Radio 8FM: its own now-playing endpoint, with wathoorjewaar.nl as fallback for target artists
+            radio8fm_name = 'Radio 8FM'
+            if radio8fm_name in RELISTEN_STATIONS or radio8fm_name in ALL_MYONLINERADIO_STATIONS or radio8fm_name in ALL_PLAYLIST24_STATIONS:
+                result = fetch_radio8fm()
+                if result:
+                    stations_data[radio8fm_name] = (result[0], result[1], 'radio8fm.nl')
+                else:
+                    result = fetch_station_from_wathoorjewaar(radio8fm_name)
+                    if result:
+                        stations_data[radio8fm_name] = (result[0], result[1], 'wathoorjewaar.nl')
 
             # DPG Media stations (JOE, Q-music): their own real-time plays feed
             for dpg_name, station_key in DPG_SOCKET_STATIONS.items():
