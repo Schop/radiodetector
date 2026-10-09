@@ -200,7 +200,7 @@ include 'includes/head.html';
                     <div class="card-body">
                         <h2 class="h4 mb-3">Veelgestelde vragen over Phil Collins op de radio</h2>
 
-                        <h3 class="h6">Hoe vaak is Phil Collins op de Nederlandse radio?</h3>
+                        <h3 class="h5">Hoe vaak is Phil Collins op de Nederlandse radio?</h3>
                         <p><?php if ($seo_ok && $pc['total'] > 0): ?>
                             Sinds <?php echo nl_date_short($seo['songs'][count($seo['songs']) - 1]['timestamp_raw']); ?> is een nummer van Phil Collins
                             <strong><?php echo h(number_format($pc['total'], 0, ',', '.')); ?></strong> keer gedetecteerd
@@ -209,7 +209,7 @@ include 'includes/head.html';
                             Vandaag was dat al <strong><?php echo h($pc['today']); ?></strong> keer.
                         <?php else: ?>De cijfers worden geladen.<?php endif; ?></p>
 
-                        <h3 class="h6">Welk radiostation draait Phil Collins het vaakst?</h3>
+                        <h3 class="h5">Welk radiostation draait Phil Collins het vaakst?</h3>
                         <p><?php if ($pc_top_stations): $names = array_keys($pc_top_stations); ?>
                             Dat is <?php echo seo_link(station_href($names[0]), $names[0]); ?> met
                             <strong><?php echo h(number_format($pc_top_stations[$names[0]], 0, ',', '.')); ?></strong> detecties<?php
@@ -220,7 +220,7 @@ include 'includes/head.html';
                             (<?php echo h(number_format($pc_top_stations[$names[2]], 0, ',', '.')); ?>)<?php endif; ?>.
                         <?php else: ?>De cijfers worden geladen.<?php endif; ?></p>
 
-                        <h3 class="h6">Wat is het meest gedraaide Phil Collins-nummer op de Nederlandse radio?</h3>
+                        <h3 class="h5">Wat is het meest gedraaide Phil Collins-nummer op de Nederlandse radio?</h3>
                         <p><?php if ($pc_top_songs): $titles = array_keys($pc_top_songs); ?>
                             Het meest gedraaide nummer is <?php echo seo_link(song_href($titles[0]), $titles[0]); ?> met
                             <strong><?php echo h(number_format($pc_top_songs[$titles[0]], 0, ',', '.')); ?></strong> keer<?php
@@ -228,12 +228,12 @@ include 'includes/head.html';
                             (<?php echo h(number_format($pc_top_songs[$titles[1]], 0, ',', '.')); ?>)<?php endif; ?>.
                         <?php else: ?>De cijfers worden geladen.<?php endif; ?></p>
 
-                        <h3 class="h6">Worden Genesis-nummers ook bijgehouden?</h3>
+                        <h3 class="h5">Worden Genesis-nummers ook bijgehouden?</h3>
                         <p>Ja. Naast Phil Collins (inclusief duetten als &lsquo;Easy Lover&rsquo; met Philip Bailey) telt de detector ook Genesis.
                             <?php if ($seo_ok && $gen['total'] > 0): ?>Genesis is <strong><?php echo h(number_format($gen['total'], 0, ',', '.')); ?></strong> keer gedetecteerd,
                             vandaag <?php echo h($gen['today']); ?> keer.<?php endif; ?></p>
 
-                        <h3 class="h6">Hoe werkt de Phil Collins Detector?</h3>
+                        <h3 class="h5">Hoe werkt de Phil Collins Detector?</h3>
                         <p>Een kleine computer in een garage controleert elke minuut de &lsquo;nu aan het spelen&rsquo;-informatie van Nederlandse radiozenders
                             en legt vast wanneer er een nummer van Phil Collins of Genesis voorbijkomt. Lees meer op de pagina
                             <a href="about.php" class="text-decoration-none">Over / FAQs</a>.</p>
