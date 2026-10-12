@@ -1091,11 +1091,32 @@ function day_charts($date) {
         }
     }
 
+    // Record day: the day with the most detections, picked with the same query as the front page so
+    // both always name the same day. Omitted when the requested day is itself the record day, because
+    // the line would just repeat the current one.
+    $record = null;
+    $record_row = $pdo->query("SELECT DATE(timestamp) as day, COUNT(*) as count FROM songs GROUP BY day ORDER BY count DESC LIMIT 1")->fetch(PDO::FETCH_ASSOC);
+    if ($record_row && !empty($record_row['day']) && $record_row['day'] !== $date) {
+        $stmt = $pdo->prepare("SELECT timestamp FROM songs WHERE DATE(timestamp) = ?");
+        $stmt->execute([$record_row['day']]);
+        $record_hours = array_fill(0, 24, 0);
+        foreach ($stmt->fetchAll(PDO::FETCH_COLUMN) as $ts_str) {
+            $ts = parse_iso_timestamp($ts_str);
+            if ($ts) $record_hours[(int)$ts->format('H')] += 1;
+        }
+        $record = [
+            'date' => $record_row['day'],
+            'count' => (int)$record_row['count'],
+            'data' => $record_hours
+        ];
+    }
+
     return [
         'hours' => [
             'labels' => $labels,
             'data' => $hours,
-            'average' => $average_hours
+            'average' => $average_hours,
+            'record' => $record
         ],
         'songs' => [ 'labels' => array_column($top_songs, 'song'), 'data' => array_column($top_songs, 'count') ],
         'stations' => [ 'labels' => array_column($top_stations, 'station'), 'data' => array_column($top_stations, 'count') ]

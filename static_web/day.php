@@ -241,6 +241,25 @@ $page_description = 'Alle detecties van Phil Collins en Genesis op de Nederlands
                         });
                     }
 
+                    // Record day (the day with the most detections), cumulative, as a third line
+                    if (data.hours.record && Array.isArray(data.hours.record.data)) {
+                        let recordRunning = 0;
+                        const recordCumulative = data.hours.record.data.map(v => (recordRunning += Number(v || 0)));
+                        const recordDate = new Date(data.hours.record.date + 'T12:00:00').toLocaleDateString('nl-NL', {
+                            day: 'numeric', month: 'short', year: 'numeric'
+                        });
+                        datasets.push({
+                            label: `Recorddag ${recordDate} (${data.hours.record.count})`,
+                            data: recordCumulative,
+                            backgroundColor: 'rgba(75,192,192,0.10)',
+                            borderColor: 'rgb(75, 192, 192)',
+                            pointRadius: 0,
+                            fill: false,
+                            borderDash: [2, 3],
+                            tension: 0.25
+                        });
+                    }
+
                     new Chart(document.getElementById('hoursChart'), {
                         type: 'line',
                         data: {
