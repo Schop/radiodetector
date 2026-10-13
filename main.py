@@ -246,6 +246,11 @@ def normalize_song_title(title):
 # Stations whose sources sometimes report "title - artist" instead of "artist - title"
 SWAPPED_ORDER_STATIONS = {'JOE'}
 
+# Stations with a reliable own feed. When it has no current track (e.g. between songs) the aggregator
+# sites are NOT used as fallback: they lag behind and re-report the previous song, which then gets
+# logged again as a new play (Arrow: "Genesis - Mama" reappeared every few minutes via myonlineradio).
+OWN_SOURCE_ONLY_STATIONS = {'Arrow Classic Rock'}
+
 def fold_text(text):
     """Lowercase and ignore punctuation, so 'Mr. Know It All' and 'Mr Know It All' compare equal.
     Apostrophes vanish ("Don't" -> "dont"); other punctuation becomes a space."""
@@ -1019,7 +1024,7 @@ def main():
             # (e.g., Radio 538 which is not reliably on relisten.nl homepage)
             if PRIORITY_MYONLINERADIO and ALL_MYONLINERADIO_STATIONS:
                 for station_name in PRIORITY_MYONLINERADIO:
-                    if station_name in stations_data:
+                    if station_name in stations_data or station_name in OWN_SOURCE_ONLY_STATIONS:
                         continue  # already have data from a better source
                     if station_name in ALL_MYONLINERADIO_STATIONS:
                         slug = ALL_MYONLINERADIO_STATIONS[station_name]
@@ -1036,6 +1041,8 @@ def main():
                     # Priority stations already fetched from myonlineradio keep that data:
                     # relisten can show stale songs (e.g. Arrow Classic Rock: months old)
                     for station_name, data in relisten_data.items():
+                        if station_name in OWN_SOURCE_ONLY_STATIONS:
+                            continue
                         stations_data.setdefault(station_name, data)
                 else:
                     relisten_failed = True
@@ -1049,7 +1056,7 @@ def main():
             if myonline_stations_to_check:
                 for station_name, slug in myonline_stations_to_check.items():
                     # Skip if already fetched from relisten (avoid duplicates)
-                    if station_name in stations_data:
+                    if station_name in stations_data or station_name in OWN_SOURCE_ONLY_STATIONS:
                         continue
                     
                     result = fetch_station_from_myonlineradio(slug)
@@ -1063,7 +1070,7 @@ def main():
             if playlist24_stations_to_check:
                 for station_name, slug in playlist24_stations_to_check.items():
                     # Skip if already fetched from other sources (avoid duplicates)
-                    if station_name in stations_data:
+                    if station_name in stations_data or station_name in OWN_SOURCE_ONLY_STATIONS:
                         continue
                     
                     result = fetch_station_from_playlist24(slug)
