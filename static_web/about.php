@@ -41,6 +41,13 @@ $page_description = 'Hoe vaak komt Phil Collins voorbij op de Nederlandse radio?
                     </div>
                     <div class="card mb-3">
                         <div class="card-body">
+                            <h5>Andere liedjes</h5>
+                            <p>Sinds kort worden ook andere liedjes bijgehouden, zoals <a href="tracked.php?artist=Ella+Langley&song=Choosin'+Texas">Choosin' Texas van Ella Langley</a> en <a href="tracked.php?artist=Toto&song=Africa">Africa van Toto</a>. Deze hebben verder niet zoveel te maken met Phil Collins, maar ze zijn misschien wel interessant om te volgen.</p>
+                            <p>Er staan links in de footer naar de andere liedjes die worden bijgehouden.</p>
+                        </div>
+                    </div>                    
+                    <div class="card mb-3">
+                        <div class="card-body">
                             <h5>Veel gestelde vragen</h5>
                             <p><strong>Kun je ook een Bonnie St. Claire detector maken?</strong> Ja, dat is zelfs vrij eenvoudig, ook voor andere artiesten als Snollebollekes, Maroon 5 of zelfs Taylor Swift. Alle code is open source en beschikbaar op <a href="https://github.com/Schop/radiodetector" target="_blank">GitHub</a>. En als het niet lukt, wil ik je ook nog wel helpen</p>
                             <p>Je kunt ook even contact opnemen via <a href="mailto:john.schop@gmail.com" target="_blank">een e-mail</a> of (als je hier ervaring mee hebt) een issue openen in de <a href="https://github.com/Schop/radiodetector" target="_blank">GitHub repository</a>.</p>  
