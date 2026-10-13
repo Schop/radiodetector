@@ -539,11 +539,12 @@ def now_playing():
                     'station': song_data['station'],
                     'artist': song_data['artist'],
                     'song': song_data['song'],
-                    'time_ago': time_ago_str
+                    'time_ago': time_ago_str,
+                    'timestamp_raw': song_data['timestamp']
                 })
-        
+
         conn.close()
-        
+
         return jsonify({
             'success': True,
             'playing': now_playing_list

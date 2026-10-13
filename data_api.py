@@ -171,7 +171,8 @@ def now_playing():
                 'station': song_data[0],
                 'artist': song_data[1],
                 'song': song_data[2],
-                'time_ago': time_ago_str
+                'time_ago': time_ago_str,
+                'timestamp_raw': song_data[3]
             })
     
     conn.close()

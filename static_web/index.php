@@ -600,13 +600,14 @@ include 'includes/head.html';
                                             <div class="fw-bold">${item.station}</div>
                                             <div class="text-muted small">${item.artist} - ${item.song}</div>
                                         </div>
-                                        <span class="badge bg-success rounded-pill">${item.time_ago}</span>
+                                        <span class="badge bg-success rounded-pill now-playing-badge" ${item.timestamp_raw ? `data-timestamp="${new Date(item.timestamp_raw).getTime()}"` : ''}>${item.time_ago}</span>
                                     </div>
                                 </li>
                             `;
                         });
                         html += '</ul>';
                         container.innerHTML = html;
+                        tickLastSongMinutesAgo();
                     } else {
                         container.innerHTML = `
                             <div class="text-center text-muted py-3">
@@ -633,6 +634,11 @@ include 'includes/head.html';
             if (el.dataset.lastTimestamp) {
                 el.textContent = Math.round((Date.now() - parseInt(el.dataset.lastTimestamp)) / 60000);
             }
+            // Keep the now-playing badges on the same rounding as the sentence above
+            document.querySelectorAll('.now-playing-badge[data-timestamp]').forEach(badge => {
+                const minutes = Math.round((Date.now() - parseInt(badge.dataset.timestamp)) / 60000);
+                badge.textContent = minutes <= 0 ? 'Speelt nu' : (minutes === 1 ? '1 min geleden' : `${minutes} min geleden`);
+            });
         }
         setInterval(tickLastSongMinutesAgo, 30000);
 
