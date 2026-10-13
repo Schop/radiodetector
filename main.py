@@ -283,7 +283,19 @@ def matches_target(artist, song):
             return True
     return matches_song_list(TARGET_SONGS, artist, song) or matches_song_list(TRACKED_SONGS, artist, song)
 
-UPLOAD_RETRY_SECONDS = 300   # after a failed upload, wait this long before trying again
+DUPLICATE_WINDOW_MINUTES = 10  # a song lasts ~5 min; the same song on the same station within 10 is one play
+
+def is_recent_duplicate(cursor, table, station, artist, song):
+    """True if this station already has the same artist/song logged in the last DUPLICATE_WINDOW_MINUTES.
+    Catches a restart while the song is playing and a source flip (an aggregator re-reporting the
+    previous song), both of which look like a new play to the change detection."""
+    cutoff = (datetime.now() - timedelta(minutes=DUPLICATE_WINDOW_MINUTES)).isoformat()
+    db.execute_query(cursor, f"SELECT artist, song FROM {table} WHERE station = ? AND timestamp > ?",
+                     (station, cutoff), db_type)
+    key = (fold_text(artist), fold_text(song))
+    return any((fold_text(a), fold_text(s)) == key for a, s in cursor.fetchall())
+
+UPLOAD_RETRY_SECONDS = 300  # after a failed upload, wait this long before trying again
 upload_pending = False       # the local DB has detections the web server doesn't have yet
 last_failed_upload = 0.0
 
@@ -1116,6 +1128,9 @@ def main():
                         # Side-project songs (e.g. Toto - Africa) go to their own table, so they
                         # never show up in the Phil Collins / Genesis statistics
                         if matches_song_list(TRACKED_SONGS, normalized_artist, normalized_song):
+                            if is_recent_duplicate(c, 'tracked_songs', station, normalized_artist, normalized_song):
+                                log_print(f"[{ts}] {station}: {normalized_song_info} (tracked, repeat within {DUPLICATE_WINDOW_MINUTES} min, not logged, via {source})", Fore.YELLOW)
+                                continue
                             db.execute_query(c, "INSERT INTO tracked_songs (station, song, artist, timestamp) VALUES (?, ?, ?, ?)",
                                       (station, normalized_song, normalized_artist, datetime.now().isoformat()), db_type)
                             conn.commit()
@@ -1141,6 +1156,11 @@ def main():
                         # Check if song is in target list ('Artist - Title' entries must match the artist too)
                         if not matched:
                             matched = matches_song_list(TARGET_SONGS, normalized_artist, normalized_song)
+
+                        # Same song on the same station within the last few minutes: not a new play
+                        if matched and is_recent_duplicate(c, 'songs', station, normalized_artist, normalized_song):
+                            log_print(f"[{ts}] {station}: {normalized_song_info} (repeat within {DUPLICATE_WINDOW_MINUTES} min, not logged, via {source})", Fore.YELLOW)
+                            continue
 
                         # Log to database and print if matched
                         if matched:
