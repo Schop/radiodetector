@@ -278,18 +278,37 @@ def matches_target(artist, song):
             return True
     return matches_song_list(TARGET_SONGS, artist, song) or matches_song_list(TRACKED_SONGS, artist, song)
 
+UPLOAD_RETRY_SECONDS = 300   # after a failed upload, wait this long before trying again
+upload_pending = False       # the local DB has detections the web server doesn't have yet
+last_failed_upload = 0.0
+
 def upload_database():
-    """Upload the database to the web server (non-fatal)"""
+    """Upload the database to the web server (non-fatal).
+    A failed upload stays pending and is retried every UPLOAD_RETRY_SECONDS (see retry_pending_upload),
+    so the site catches up after an outage without hammering a server that is down."""
+    global upload_pending, last_failed_upload
+    upload_pending = True
+    if time.time() - last_failed_upload < UPLOAD_RETRY_SECONDS:
+        return  # still cooling down after a failure; the pending flag makes the loop retry later
     try:
         import subprocess
         result = subprocess.run(['python3', 'upload_db.py'],
-                                capture_output=True, text=True, timeout=30)
+                                capture_output=True, text=True, timeout=120)
         if result.returncode == 0:
+            upload_pending = False
             log_print(f"✓ Database uploaded to web server", Fore.GREEN)
         else:
-            log_print(f"⚠️ Database upload failed: {result.stderr.strip()}", Fore.YELLOW)
+            last_failed_upload = time.time()
+            reason = (result.stdout.strip().splitlines() or ['no output'])[-1]
+            log_print(f"⚠️ Database upload failed (will retry): {reason}", Fore.YELLOW)
     except Exception as e:
-        log_print(f"⚠️ Database upload error: {e}", Fore.YELLOW)
+        last_failed_upload = time.time()
+        log_print(f"⚠️ Database upload error (will retry): {e}", Fore.YELLOW)
+
+def retry_pending_upload():
+    """Called once per cycle: push the DB again if an earlier upload failed"""
+    if upload_pending:
+        upload_database()
 
 def create_song_key(artist, song):
     """Create a normalized key for song comparison to handle different orderings"""
@@ -1142,6 +1161,9 @@ def main():
                 ts = get_timestamp()
                 log_print(f"[{ts}] No song changes detected", Fore.CYAN)
             
+            # Catch the website up if an earlier upload failed
+            retry_pending_upload()
+
             # Wait 60 seconds before next check
             log_print("-" * 60, Fore.CYAN)
             log_print("Waiting 60 seconds to update the list again...", Fore.CYAN)
