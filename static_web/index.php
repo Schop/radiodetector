@@ -244,7 +244,7 @@ include 'includes/head.html';
 
         <?php
         // front page only: a quiet link to the Toto - Africa side project
-        $footer_extra = '<a href="africa.php" class="ms-2" style="opacity: .5;" title="Africa - Toto"><small>en &lsquo;Africa&rsquo; van Toto dan?</small></a>';
+        $footer_extra = '<a href="tracked.php?artist=Toto&amp;song=Africa" class="ms-2" style="opacity: .5;" title="Africa - Toto"><small>en &lsquo;Africa&rsquo; van Toto dan?</small></a>';
         include 'includes/footer.html';
         ?>
         </main>

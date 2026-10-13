@@ -36,6 +36,7 @@ target_songs:
 # Use "Artist - Title" so covers and songs like "Waka Waka (This Time For Africa)" don't match.
 tracked_songs:
   - Toto - Africa
+  - Ella Langley - Choosin' Texas
 
 # Stations that should prioritize myonlineradio (e.g., due to relisten.nl homepage rotation)
 priority_myonlineradio:
