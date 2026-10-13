@@ -16,7 +16,7 @@ if (is_array($tracked_entries)) {
         if (isset($artist, $song) && strcasecmp($artist, $t_artist) === 0 && strcasecmp($song, $t_song) === 0) continue;
 
         $href = 'tracked.php?' . http_build_query(['artist' => $t_artist, 'song' => $t_song]);
-        $tracked_links[] = '<a href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '" class="text-decoration-none text-muted">'
+        $tracked_links[] = '<a href="' . htmlspecialchars($href, ENT_QUOTES, 'UTF-8') . '" class="text-decoration-none">'
             . htmlspecialchars("$t_song - $t_artist", ENT_QUOTES, 'UTF-8') . '</a>';
     }
 }

@@ -4,7 +4,7 @@
         <small id="footerText">Tracking since 2024-01-01 - Version 1.0 - Page auto-refreshes every 5 minutes </small>
         <?php if (!empty($footer_extra)) echo $footer_extra; ?>
         <?php if (!empty($tracked_links)): ?>
-        <div class="mt-2" style="opacity: .6;">
+        <div class="mt-2">
             <small>Ook gevolgd: <?= implode(' &middot; ', $tracked_links) ?></small>
         </div>
         <?php endif; ?>
