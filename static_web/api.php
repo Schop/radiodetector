@@ -878,11 +878,18 @@ function song_charts($song_name) {
 
 // Overview of a side-project song (e.g. Toto - Africa) from the tracked_songs table.
 // That table is kept apart from `songs`, so none of this ever reaches the Phil Collins statistics.
+// Lowercase and ignore punctuation, like fold_text() in main.py: "Mr. Know It All" == "Mr Know It All"
+function fold_text($text) {
+    $text = mb_strtolower((string)$text, 'UTF-8');
+    $text = preg_replace("/['\u{2018}\u{2019}`]/u", '', $text);
+    return trim(preg_replace('/[\W_]+/u', ' ', $text));
+}
+
 function tracked_overview($artist, $song) {
     $pdo = get_db_connection();
     try {
-        $stmt = $pdo->prepare("SELECT station, song, timestamp FROM tracked_songs WHERE LOWER(artist) = LOWER(?) ORDER BY timestamp DESC");
-        if (!$stmt || !$stmt->execute([$artist])) {
+        $stmt = $pdo->prepare("SELECT station, artist, song, timestamp FROM tracked_songs ORDER BY timestamp DESC");
+        if (!$stmt || !$stmt->execute()) {
             return ['error' => 'tracked_songs table not available'];
         }
         $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -890,7 +897,10 @@ function tracked_overview($artist, $song) {
         return ['error' => 'tracked_songs table not available'];
     }
     // match on the title like the detector does, so "Africa (Live)" counts too
-    $rows = array_values(array_filter($rows, fn($r) => stripos($r['song'], $song) !== false));
+    $f_artist = fold_text($artist);
+    $f_song = fold_text($song);
+    $rows = array_values(array_filter($rows, fn($r) =>
+        fold_text($r['artist']) === $f_artist && strpos(fold_text($r['song']), $f_song) !== false));
 
     $today_iso = (new DateTime())->format('Y-m-d');
     $stations = [];

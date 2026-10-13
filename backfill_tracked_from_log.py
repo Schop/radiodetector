@@ -44,12 +44,18 @@ def title_case(text):
     return ' '.join(words)
 
 
+def fold_text(text):
+    """Same as main.py's fold_text: lowercase, punctuation ignored ('Mr. Know It All' == 'Mr Know It All')"""
+    text = re.sub(r"['‘’`]", '', text.lower())
+    return ' '.join(re.sub(r'[\W_]+', ' ', text).split())
+
+
 def parse_entry(entry):
     """'Toto - Africa' -> ('toto', 'africa'); a plain 'Africa' -> (None, 'africa') matches any artist"""
     if ' - ' in entry:
         artist, title = entry.split(' - ', 1)
-        return artist.strip().lower(), title.strip().lower()
-    return None, entry.strip().lower()
+        return fold_text(artist), fold_text(title)
+    return None, fold_text(entry)
 
 
 def resolve(entries, artist, song):
@@ -58,7 +64,7 @@ def resolve(entries, artist, song):
     for entry in entries:
         t_artist, t_title = parse_entry(entry)
         for a, s in ((artist, song), (song, artist)):
-            if t_title and t_title in s.lower() and (t_artist is None or t_artist == a.lower()):
+            if t_title and t_title in fold_text(s) and (t_artist is None or t_artist == fold_text(a)):
                 return title_case(a), title_case(s)
     return None
 

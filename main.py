@@ -246,12 +246,18 @@ def normalize_song_title(title):
 # Stations whose sources sometimes report "title - artist" instead of "artist - title"
 SWAPPED_ORDER_STATIONS = {'JOE'}
 
+def fold_text(text):
+    """Lowercase and ignore punctuation, so 'Mr. Know It All' and 'Mr Know It All' compare equal.
+    Apostrophes vanish ("Don't" -> "dont"); other punctuation becomes a space."""
+    text = re.sub(r"['‘’`]", '', text.lower())
+    return ' '.join(re.sub(r'[\W_]+', ' ', text).split())
+
 def parse_target_song(entry):
     """'Toto - Africa' -> ('toto', 'africa'); a plain 'Africa' -> (None, 'africa') matches any artist"""
     if ' - ' in entry:
         artist, title = entry.split(' - ', 1)
-        return artist.strip().lower(), title.strip().lower()
-    return None, entry.strip().lower()
+        return fold_text(artist), fold_text(title)
+    return None, fold_text(entry)
 
 def matches_song_list(entries, artist, song):
     """True if artist/song (already normalized) match an entry; 'Artist - Title' entries need both"""
@@ -259,7 +265,7 @@ def matches_song_list(entries, artist, song):
         if not entry:
             continue
         target_artist, target_title = parse_target_song(entry)
-        if target_title and target_title in song.lower() and (target_artist is None or target_artist == artist.lower()):
+        if target_title and target_title in fold_text(song) and (target_artist is None or target_artist == fold_text(artist)):
             return True
     return False
 
