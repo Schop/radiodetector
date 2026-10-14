@@ -373,14 +373,20 @@ def send_heartbeat(stations_ok, monitored_names):
         last_heartbeat_failure = time.time()
         log_print(f"⚠️ Heartbeat failed: {e} (next try in {HEARTBEAT_RETRY_SECONDS // 60} min)", Fore.YELLOW)
 
-def upload_database():
-    """Upload the database to the web server (non-fatal).
-    A failed upload stays pending and is retried every UPLOAD_RETRY_SECONDS (see retry_pending_upload),
-    so the site catches up after an outage without hammering a server that is down."""
-    global upload_pending, upload_pending_since, last_failed_upload
+def mark_upload_pending():
+    """Record that the local DB has a new detection. The upload itself happens once at the end of the
+    cycle (upload_pending_database), so several detections in one cycle cost one upload, not one each."""
+    global upload_pending, upload_pending_since
     if not upload_pending:
         upload_pending_since = time.time()
     upload_pending = True
+
+def upload_database():
+    """Upload the database to the web server (non-fatal).
+    A failed upload stays pending and is retried every UPLOAD_RETRY_SECONDS (see upload_pending_database),
+    so the site catches up after an outage without hammering a server that is down."""
+    global upload_pending, upload_pending_since, last_failed_upload
+    mark_upload_pending()
     if time.time() - last_failed_upload < UPLOAD_RETRY_SECONDS:
         return  # still cooling down after a failure; the pending flag makes the loop retry later
     try:
@@ -399,8 +405,9 @@ def upload_database():
         last_failed_upload = time.time()
         log_print(f"⚠️ Database upload error (will retry): {e}", Fore.YELLOW)
 
-def retry_pending_upload():
-    """Called once per cycle: push the DB again if an earlier upload failed"""
+def upload_pending_database():
+    """Called once at the end of every cycle: upload if this cycle detected something, or if an
+    earlier upload failed (that one is retried every UPLOAD_RETRY_SECONDS)."""
     if upload_pending:
         upload_database()
 
@@ -1228,7 +1235,7 @@ def main():
                                       (station, normalized_song, normalized_artist, datetime.now().isoformat()), db_type)
                             conn.commit()
                             log_print(f"[{ts}] {station}: {normalized_song_info} (tracked, via {source})", Fore.MAGENTA)
-                            upload_database()
+                            mark_upload_pending()  # uploaded once at the end of the cycle
                             continue
 
                         # Check if artist is in target list
@@ -1266,8 +1273,8 @@ def main():
                             log_print("=" * 60, Fore.RED, Style.BRIGHT)
                             log_print(f"[{ts}] {station}: {normalized_song_info} (via {source})", Fore.RED, Style.BRIGHT)
 
-                            # Upload database to web server after new detection
-                            upload_database()
+                            # The database goes to the web server once at the end of the cycle
+                            mark_upload_pending()
                             log_print("=" * 60, Fore.RED, Style.BRIGHT)
                             # Beep to alert user (works on Windows and Linux)
                             print('\a', end='', flush=True)
@@ -1284,8 +1291,8 @@ def main():
             if songs_changed:
                 last_song_change = time.time()
 
-            # Catch the website up if an earlier upload failed
-            retry_pending_upload()
+            # One upload for everything detected this cycle, and the retry of an earlier failed upload
+            upload_pending_database()
 
             send_heartbeat(len(stations_data), monitored_names)
 
