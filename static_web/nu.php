@@ -13,7 +13,7 @@ $esc = fn($text) => htmlspecialchars((string)$text, ENT_QUOTES, 'UTF-8');
             <?php include 'includes/nav.html'; ?>
 
             <h1>Nu op de radio</h1>
-            <p class="text-muted">Het laatst gedetecteerde nummer bij elk gecontroleerd radiostation. Nummers van Phil Collins en Genesis zijn groen gemarkeerd; zenders waarvan al een tijd geen nieuwe gegevens binnenkwamen zijn grijs.</p>
+            <p class="text-muted">Het laatst gedetecteerde nummer bij elk gecontroleerd radiostation. Nummers van Phil Collins en Genesis zijn groen gemarkeerd; zenders die al meer dan 10 minuten geen nieuw nummer of geen gegevens meer doorgeven zijn grijs.</p>
 
             <?php if ($snapshot === null): ?>
             <div class="alert alert-info text-center" role="alert">
@@ -54,7 +54,8 @@ $esc = fn($text) => htmlspecialchars((string)$text, ENT_QUOTES, 'UTF-8');
                                 </td>
                                 <td data-order="<?= (int)$row['since_s'] ?>" class="<?= $row['stale'] ? 'text-muted' : '' ?>">
                                     <?= $row['since_s'] === null ? '-' : $esc(nu_duration($row['since_s'])) ?>
-                                    <?php if ($row['stale']): ?><small>(geen recente gegevens)</small><?php endif; ?>
+                                    <?php if ($row['no_data']): ?><small>(geen recente gegevens)</small>
+                                    <?php elseif ($row['unchanged']): ?><small>(al even hetzelfde)</small><?php endif; ?>
                                 </td>
                                 <?php endif; ?>
                             </tr>

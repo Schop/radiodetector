@@ -4,7 +4,9 @@
 // Each row: station, artist, song, source, highlight, seen_ago_s (how long ago the checker last got
 // data for this station), since_s (how long that song has been seen), stale (no recent data).
 
-const STATIONS_NOW_STALE_AFTER = 10 * 60;  // no data from a station for this long: show it greyed out
+// A row is greyed out when the station sent no data for this long (no_data), or when it keeps
+// reporting the same song for this long (unchanged): no new information either way.
+const STATIONS_NOW_STALE_AFTER = 10 * 60;
 
 function load_stations_now($file, $now) {
     $raw = is_file($file) ? @file_get_contents($file) : false;
@@ -19,6 +21,9 @@ function load_stations_now($file, $now) {
         if (empty($s['station'])) continue;
         $has_song = !empty($s['artist']) && !empty($s['song']);
         $seen_ago = isset($s['seen_age_s']) ? (int)$s['seen_age_s'] + $elapsed : null;
+        $since = isset($s['since_age_s']) ? (int)$s['since_age_s'] + $elapsed : null;
+        $no_data = !$has_song || $seen_ago === null || $seen_ago > STATIONS_NOW_STALE_AFTER;
+        $unchanged = !$no_data && $since !== null && $since > STATIONS_NOW_STALE_AFTER;
         $rows[] = [
             'station' => $s['station'],
             'artist' => $has_song ? $s['artist'] : null,
@@ -26,8 +31,10 @@ function load_stations_now($file, $now) {
             'source' => $s['source'] ?? null,
             'highlight' => !empty($s['highlight']),
             'seen_ago_s' => $seen_ago,
-            'since_s' => isset($s['since_age_s']) ? (int)$s['since_age_s'] + $elapsed : null,
-            'stale' => !$has_song || $seen_ago === null || $seen_ago > STATIONS_NOW_STALE_AFTER,
+            'since_s' => $since,
+            'no_data' => $no_data,
+            'unchanged' => $unchanged,
+            'stale' => $no_data || $unchanged,
         ];
     }
     usort($rows, fn($a, $b) => strcasecmp($a['station'], $b['station']));
