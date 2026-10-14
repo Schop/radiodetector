@@ -49,3 +49,7 @@ env/
 .DS_Store
 /static_web/db_check.php
 /radio_songs.db.b64.txt
+# Heartbeat: secret and the last received status (written on the web server)
+static_web/heartbeat_secret.php
+static_web/heartbeat.json
+static_web/heartbeat.json.tmp

@@ -24,6 +24,13 @@ web_auth:
   username: admin  # Change to your preferred username
   password: YOUR_SECURE_PASSWORD_HERE  # ⚠️ CHANGE THIS!
 
+# Heartbeat: every 5 minutes the checker POSTs a few numbers to the website, so the site can show
+# whether the checker is alive (and a banner if not). Leave out to disable.
+# The secret must match the one in static_web/heartbeat_secret.php on the web server.
+heartbeat:
+  url: https://your-domain.example/heartbeat.php
+  secret: CHANGE-ME-to-a-long-random-string
+
 # Target artists and songs to check
 target_artists:
   - Phil Collins

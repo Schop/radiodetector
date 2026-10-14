@@ -297,13 +297,44 @@ def is_recent_duplicate(cursor, table, station, artist, song):
 
 UPLOAD_RETRY_SECONDS = 300  # after a failed upload, wait this long before trying again
 upload_pending = False       # the local DB has detections the web server doesn't have yet
+upload_pending_since = None  # when upload_pending became True
 last_failed_upload = 0.0
+
+# Heartbeat: tells the website the checker is alive, independent of database uploads (which only
+# happen when a target song is detected). Configured in config.yaml under 'heartbeat' (url, secret).
+HEARTBEAT_INTERVAL = 300
+HEARTBEAT_CONFIG = (load_station_config_from_yaml() or {}).get('heartbeat') or {}
+last_heartbeat_attempt = 0.0
+last_song_change = time.time()  # when any station last switched song (startup counts as a change)
+
+def send_heartbeat(stations_ok, stations_total):
+    """POST a few numbers to the website's heartbeat.php. Never raises and never blocks for long:
+    a dead web host must not slow down the detection loop. At most one attempt per HEARTBEAT_INTERVAL."""
+    global last_heartbeat_attempt
+    url, secret = HEARTBEAT_CONFIG.get('url'), HEARTBEAT_CONFIG.get('secret')
+    if not url or not secret or time.time() - last_heartbeat_attempt < HEARTBEAT_INTERVAL:
+        return
+    last_heartbeat_attempt = time.time()
+    payload = {
+        'stations_ok': stations_ok,
+        'stations_total': stations_total,
+        'last_change_age_s': int(time.time() - last_song_change),
+        'upload_pending_age_s': int(time.time() - upload_pending_since) if upload_pending and upload_pending_since else None,
+    }
+    try:
+        response = requests.post(url, json=payload, headers={'X-Heartbeat-Secret': secret}, timeout=5)
+        if response.status_code != 200:
+            log_print(f"⚠️ Heartbeat rejected: HTTP {response.status_code}", Fore.YELLOW)
+    except Exception as e:
+        log_print(f"⚠️ Heartbeat failed: {e}", Fore.YELLOW)
 
 def upload_database():
     """Upload the database to the web server (non-fatal).
     A failed upload stays pending and is retried every UPLOAD_RETRY_SECONDS (see retry_pending_upload),
     so the site catches up after an outage without hammering a server that is down."""
-    global upload_pending, last_failed_upload
+    global upload_pending, upload_pending_since, last_failed_upload
+    if not upload_pending:
+        upload_pending_since = time.time()
     upload_pending = True
     if time.time() - last_failed_upload < UPLOAD_RETRY_SECONDS:
         return  # still cooling down after a failure; the pending flag makes the loop retry later
@@ -313,6 +344,7 @@ def upload_database():
                                 capture_output=True, text=True, timeout=120)
         if result.returncode == 0:
             upload_pending = False
+            upload_pending_since = None
             log_print(f"✓ Database uploaded to web server", Fore.GREEN)
         else:
             last_failed_upload = time.time()
@@ -932,6 +964,7 @@ def fetch_all_stations_from_relisten():
 
 def main():
     """Main loop - Monitor Dutch radio stations for target artists and songs"""
+    global last_song_change  # read by send_heartbeat()
     # Record start time for uptime tracking
     start_time = datetime.now().isoformat()
     try:
@@ -1089,8 +1122,11 @@ def main():
                     if result:
                         stations_data[station_name] = (result[0], result[1], 'playlist24.nl')
             
+            monitored_stations = len(set(RELISTEN_STATIONS) | set(ALL_MYONLINERADIO_STATIONS) | set(ALL_PLAYLIST24_STATIONS))
+
             if not stations_data:
                 log_print(f"Warning: No station data retrieved from any source", Fore.RED)
+                send_heartbeat(0, monitored_stations)
                 time.sleep(60)
                 continue
             
@@ -1188,8 +1224,13 @@ def main():
                 ts = get_timestamp()
                 log_print(f"[{ts}] No song changes detected", Fore.CYAN)
             
+            if songs_changed:
+                last_song_change = time.time()
+
             # Catch the website up if an earlier upload failed
             retry_pending_upload()
+
+            send_heartbeat(len(stations_data), monitored_stations)
 
             # Wait 60 seconds before next check
             log_print("-" * 60, Fore.CYAN)
