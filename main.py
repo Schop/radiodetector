@@ -323,7 +323,9 @@ def send_heartbeat(stations_ok, stations_total):
     }
     try:
         response = requests.post(url, json=payload, headers={'X-Heartbeat-Secret': secret}, timeout=5)
-        if response.status_code != 200:
+        if response.status_code == 200:
+            log_print(f"♥ Heartbeat sent ({stations_ok}/{stations_total} stations)", Fore.GREEN)
+        else:
             log_print(f"⚠️ Heartbeat rejected: HTTP {response.status_code}", Fore.YELLOW)
     except Exception as e:
         log_print(f"⚠️ Heartbeat failed: {e}", Fore.YELLOW)
