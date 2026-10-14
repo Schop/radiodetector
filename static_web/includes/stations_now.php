@@ -4,7 +4,7 @@
 // Each row: station, artist, song, source, highlight, seen_ago_s (how long ago the checker last got
 // data for this station), since_s (how long that song has been seen), stale (no recent data).
 
-const STATIONS_NOW_STALE_AFTER = 15 * 60;  // no data from a station for this long: show it as stale
+const STATIONS_NOW_STALE_AFTER = 10 * 60;  // no data from a station for this long: show it greyed out
 
 function load_stations_now($file, $now) {
     $raw = is_file($file) ? @file_get_contents($file) : false;

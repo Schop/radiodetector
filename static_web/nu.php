@@ -13,7 +13,7 @@ $esc = fn($text) => htmlspecialchars((string)$text, ENT_QUOTES, 'UTF-8');
             <?php include 'includes/nav.html'; ?>
 
             <h1>Nu op de radio</h1>
-            <p class="text-muted">Het laatst gedetecteerde nummer bij elk gecontroleerd radiostation. Nummers van Phil Collins en Genesis zijn gemarkeerd.</p>
+            <p class="text-muted">Het laatst gedetecteerde nummer bij elk gecontroleerd radiostation. Nummers van Phil Collins en Genesis zijn groen gemarkeerd; zenders waarvan al een tijd geen nieuwe gegevens binnenkwamen zijn grijs.</p>
 
             <?php if ($snapshot === null): ?>
             <div class="alert alert-info text-center" role="alert">
@@ -37,7 +37,7 @@ $esc = fn($text) => htmlspecialchars((string)$text, ENT_QUOTES, 'UTF-8');
                         </thead>
                         <tbody>
                         <?php foreach ($snapshot['rows'] as $row): ?>
-                            <tr class="<?= $row['highlight'] ? 'table-warning' : '' ?>">
+                            <tr class="<?= trim(($row['highlight'] ? 'table-success fw-semibold ' : '') . ($row['stale'] ? 'nu-stale' : '')) ?>">
                                 <td><a href="/station.php#<?= rawurlencode($row['station']) ?>" class="text-decoration-none"><?= $esc($row['station']) ?></a></td>
                                 <?php if ($row['artist'] === null): ?>
                                 <td class="text-muted">geen gegevens</td>
@@ -69,6 +69,11 @@ $esc = fn($text) => htmlspecialchars((string)$text, ENT_QUOTES, 'UTF-8');
             <?php include 'includes/footer.html'; ?>
         </main>
     </div>
+
+    <style>
+        /* no new data from this station for a while: fade the whole row a little */
+        #nowTable tr.nu-stale > * { opacity: .55; }
+    </style>
 
     <script>
         <?php if ($snapshot !== null): ?>
