@@ -302,7 +302,28 @@ last_failed_upload = 0.0
 
 # Heartbeat: tells the website the checker is alive, independent of database uploads (which only
 # happen when a target song is detected). Configured in config.yaml under 'heartbeat' (url, secret).
-HEARTBEAT_RETRY_SECONDS = 300  # after a failed heartbeat, wait this long (otherwise one goes out every cycle)
+CYCLE_SECONDS = 60
+next_cycle_start = time.monotonic()  # when the next cycle is due; set again right before the loop starts
+
+def wait_for_next_cycle(announce=True):
+    """Sleep until the next cycle is due, so a cycle starts every CYCLE_SECONDS however long the fetching took
+    (a fixed sleep after the work made the period work time + 60). Cycles are scheduled on a fixed grid, so
+    small delays don't add up. If a cycle overruns its slot the next one starts right away, without trying
+    to catch up with a burst of extra cycles."""
+    global next_cycle_start
+    next_cycle_start += CYCLE_SECONDS
+    remaining = next_cycle_start - time.monotonic()
+    if remaining <= 0:
+        log_print(f"Cycle took {CYCLE_SECONDS - remaining:.0f}s, longer than {CYCLE_SECONDS}s: starting the next one right away", Fore.YELLOW)
+        next_cycle_start = time.monotonic()
+        return
+    if announce:
+        log_print("-" * 60, Fore.CYAN)
+        log_print(f"Waiting {remaining:.0f} seconds until the next cycle...", Fore.CYAN)
+        log_print("-" * 60, Fore.CYAN)
+    time.sleep(remaining)
+
+HEARTBEAT_RETRY_SECONDS = 300 # after a failed heartbeat, wait this long (otherwise one goes out every cycle)
 HEARTBEAT_CONFIG = (load_station_config_from_yaml() or {}).get('heartbeat') or {}
 last_heartbeat_failure = 0.0
 last_song_change = time.time()  # when any station last switched song (startup counts as a change)
@@ -988,7 +1009,7 @@ def fetch_all_stations_from_relisten():
 
 def main():
     """Main loop - Monitor Dutch radio stations for target artists and songs"""
-    global last_song_change  # read by send_heartbeat()
+    global last_song_change, next_cycle_start  # last_song_change is read by send_heartbeat()
     # Record start time for uptime tracking
     start_time = datetime.now().isoformat()
     try:
@@ -1018,6 +1039,7 @@ def main():
     settings_check_counter = 0
     last_settings_check = None
     
+    next_cycle_start = time.monotonic()
     try:
         while True:
             # Check if settings have been updated (every 5 iterations = 5 minutes)
@@ -1151,7 +1173,7 @@ def main():
             if not stations_data:
                 log_print(f"Warning: No station data retrieved from any source", Fore.RED)
                 send_heartbeat(0, monitored_names)
-                time.sleep(60)
+                wait_for_next_cycle(announce=False)
                 continue
             
             # Track if any songs changed in this iteration
@@ -1267,11 +1289,7 @@ def main():
 
             send_heartbeat(len(stations_data), monitored_names)
 
-            # Wait 60 seconds before next check
-            log_print("-" * 60, Fore.CYAN)
-            log_print("Waiting 60 seconds to update the list again...", Fore.CYAN)
-            log_print("-" * 60, Fore.CYAN)
-            time.sleep(60)
+            wait_for_next_cycle()
     
     except KeyboardInterrupt:
         log_print("\n\nShutting down...")
