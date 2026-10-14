@@ -1234,7 +1234,11 @@ def main():
                             db.execute_query(c, "INSERT INTO tracked_songs (station, song, artist, timestamp) VALUES (?, ?, ?, ?)",
                                       (station, normalized_song, normalized_artist, datetime.now().isoformat()), db_type)
                             conn.commit()
-                            log_print(f"[{ts}] {station}: {normalized_song_info} (tracked, via {source})", Fore.MAGENTA)
+                            # Framed with * so it stands out in a log without colors (the Pi Connect terminal has none).
+                            # Keep the "(tracked" text: backfill_tracked_from_log.py looks for it.
+                            log_print("*" * 60, Fore.MAGENTA)
+                            log_print(f"**** [{ts}] {station}: {normalized_song_info} (tracked, via {source}) ****", Fore.MAGENTA)
+                            log_print("*" * 60, Fore.MAGENTA)
                             mark_upload_pending()  # uploaded once at the end of the cycle
                             continue
 
