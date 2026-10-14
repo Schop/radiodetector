@@ -40,7 +40,8 @@ $esc = fn($text) => htmlspecialchars((string)$text, ENT_QUOTES, 'UTF-8');
                             <tr class="<?= $row['highlight'] ? 'table-warning' : '' ?>">
                                 <td><a href="/station.php#<?= rawurlencode($row['station']) ?>" class="text-decoration-none"><?= $esc($row['station']) ?></a></td>
                                 <?php if ($row['artist'] === null): ?>
-                                <td colspan="2" class="text-muted">geen gegevens</td>
+                                <td class="text-muted">geen gegevens</td>
+                                <td></td>
                                 <td data-order="999999"></td>
                                 <?php else: ?>
                                 <td><?= $esc($row['artist']) ?></td>
