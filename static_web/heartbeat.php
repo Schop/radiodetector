@@ -22,31 +22,66 @@ if (!is_string($secret) || $secret === '' || !hash_equals($secret, (string)$give
     heartbeat_fail(403, 'forbidden');
 }
 
-if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > 4096) {
+// The payload carries the per-station snapshot for nu.php (~100 bytes per station), so allow some room.
+const HEARTBEAT_MAX_BYTES = 65536;
+if ((int)($_SERVER['CONTENT_LENGTH'] ?? 0) > HEARTBEAT_MAX_BYTES) {
     heartbeat_fail(413, 'payload too large');
 }
-$body = json_decode(file_get_contents('php://input'), true);
+$raw_body = file_get_contents('php://input', false, null, 0, HEARTBEAT_MAX_BYTES + 1);
+if (strlen($raw_body) > HEARTBEAT_MAX_BYTES) {
+    heartbeat_fail(413, 'payload too large');
+}
+$body = json_decode($raw_body, true);
 if (!is_array($body) || !isset($body['stations_ok'], $body['stations_total'])) {
     heartbeat_fail(400, 'invalid payload');
 }
 
 // Ages are sent relative ("n seconds ago") so a wrong clock on the Pi doesn't matter;
 // the moment of receipt is stamped here with the server's clock.
-$age = function ($key) use ($body) {
-    return isset($body[$key]) && is_numeric($body[$key]) ? max(0, (int)$body[$key]) : null;
-};
+function heartbeat_age($value) {
+    return is_numeric($value) ? max(0, (int)$value) : null;
+}
+function heartbeat_text($value) {
+    return is_string($value) && trim($value) !== '' ? mb_substr(trim($value), 0, 200) : null;
+}
+$received_at = time();
 $data = [
-    'received_at' => time(),
+    'received_at' => $received_at,
     'stations_ok' => max(0, (int)$body['stations_ok']),
     'stations_total' => max(0, (int)$body['stations_total']),
-    'last_change_age_s' => $age('last_change_age_s'),
-    'upload_pending_age_s' => $age('upload_pending_age_s'),
+    'last_change_age_s' => heartbeat_age($body['last_change_age_s'] ?? null),
+    'upload_pending_age_s' => heartbeat_age($body['upload_pending_age_s'] ?? null),
 ];
 
+// what is on air per station, for nu.php (optional: an older sender doesn't send it)
+$stations = null;
+if (isset($body['stations']) && is_array($body['stations'])) {
+    $stations = [];
+    foreach (array_slice($body['stations'], 0, 200) as $s) {
+        $name = is_array($s) ? heartbeat_text($s['station'] ?? null) : null;
+        if ($name === null) continue;
+        $stations[] = [
+            'station' => $name,
+            'artist' => heartbeat_text($s['artist'] ?? null),
+            'song' => heartbeat_text($s['song'] ?? null),
+            'source' => heartbeat_text($s['source'] ?? null),
+            'since_age_s' => heartbeat_age($s['since_age_s'] ?? null),
+            'seen_age_s' => heartbeat_age($s['seen_age_s'] ?? null),
+            'highlight' => !empty($s['highlight']),
+        ];
+    }
+}
+
 // write to a temp file and rename, so a page never reads a half-written file
-$target = __DIR__ . '/heartbeat.json';
-$tmp = $target . '.tmp';
-if (file_put_contents($tmp, json_encode($data), LOCK_EX) === false || !rename($tmp, $target)) {
+function heartbeat_store($target, $data) {
+    $tmp = $target . '.tmp';
+    return file_put_contents($tmp, json_encode($data), LOCK_EX) !== false && rename($tmp, $target);
+}
+if (!heartbeat_store(__DIR__ . '/heartbeat.json', $data)) {
     heartbeat_fail(500, 'could not store heartbeat');
+}
+if ($stations !== null
+    && !heartbeat_store(__DIR__ . '/stations_now.json', ['received_at' => $received_at, 'stations' => $stations])) {
+    heartbeat_fail(500, 'could not store stations');
 }
 echo json_encode(['ok' => true]);

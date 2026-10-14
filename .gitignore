@@ -53,3 +53,5 @@ env/
 static_web/heartbeat_secret.php
 static_web/heartbeat.json
 static_web/heartbeat.json.tmp
+static_web/stations_now.json
+static_web/stations_now.json.tmp

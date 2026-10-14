@@ -302,33 +302,55 @@ last_failed_upload = 0.0
 
 # Heartbeat: tells the website the checker is alive, independent of database uploads (which only
 # happen when a target song is detected). Configured in config.yaml under 'heartbeat' (url, secret).
-HEARTBEAT_INTERVAL = 300
+HEARTBEAT_RETRY_SECONDS = 300  # after a failed heartbeat, wait this long (otherwise one goes out every cycle)
 HEARTBEAT_CONFIG = (load_station_config_from_yaml() or {}).get('heartbeat') or {}
-last_heartbeat_attempt = 0.0
+last_heartbeat_failure = 0.0
 last_song_change = time.time()  # when any station last switched song (startup counts as a change)
 
-def send_heartbeat(stations_ok, stations_total):
-    """POST a few numbers to the website's heartbeat.php. Never raises and never blocks for long:
-    a dead web host must not slow down the detection loop. At most one attempt per HEARTBEAT_INTERVAL."""
-    global last_heartbeat_attempt
+# What is on air per station, for the website's nu.php (sent with the heartbeat, never stored in the DB):
+# station -> {key, artist, song, source, since (first seen), seen (last seen), highlight}
+station_state = {}
+
+def build_station_snapshot(monitored_names):
+    """One row per monitored station: the song last seen and how long ago, relative to now.
+    A station without data this cycle keeps its last song, so its 'seen' age grows and the page shows it as stale."""
+    now = time.time()
+    rows = []
+    for name in sorted(monitored_names):
+        state = station_state.get(name)
+        if state:
+            rows.append({'station': name, 'artist': state['artist'], 'song': state['song'], 'source': state['source'],
+                         'since_age_s': int(now - state['since']), 'seen_age_s': int(now - state['seen']),
+                         'highlight': state['highlight']})
+        else:
+            rows.append({'station': name})
+    return rows
+
+def send_heartbeat(stations_ok, monitored_names):
+    """POST the checker's status and the per-station snapshot to the website's heartbeat.php, once per cycle.
+    Never raises and never blocks for long: a dead web host must not slow down the detection loop, so
+    after a failure it stays quiet for HEARTBEAT_RETRY_SECONDS."""
+    global last_heartbeat_failure
     url, secret = HEARTBEAT_CONFIG.get('url'), HEARTBEAT_CONFIG.get('secret')
-    if not url or not secret or time.time() - last_heartbeat_attempt < HEARTBEAT_INTERVAL:
+    if not url or not secret or time.time() - last_heartbeat_failure < HEARTBEAT_RETRY_SECONDS:
         return
-    last_heartbeat_attempt = time.time()
     payload = {
         'stations_ok': stations_ok,
-        'stations_total': stations_total,
+        'stations_total': len(monitored_names),
         'last_change_age_s': int(time.time() - last_song_change),
         'upload_pending_age_s': int(time.time() - upload_pending_since) if upload_pending and upload_pending_since else None,
+        'stations': build_station_snapshot(monitored_names),
     }
     try:
         response = requests.post(url, json=payload, headers={'X-Heartbeat-Secret': secret}, timeout=5)
         if response.status_code == 200:
-            log_print(f"♥ Heartbeat sent ({stations_ok}/{stations_total} stations)", Fore.GREEN)
+            log_print(f"♥ Heartbeat sent ({stations_ok}/{len(monitored_names)} stations)", Fore.GREEN)
         else:
-            log_print(f"⚠️ Heartbeat rejected: HTTP {response.status_code}", Fore.YELLOW)
+            last_heartbeat_failure = time.time()
+            log_print(f"⚠️ Heartbeat rejected: HTTP {response.status_code} (next try in {HEARTBEAT_RETRY_SECONDS // 60} min)", Fore.YELLOW)
     except Exception as e:
-        log_print(f"⚠️ Heartbeat failed: {e}", Fore.YELLOW)
+        last_heartbeat_failure = time.time()
+        log_print(f"⚠️ Heartbeat failed: {e} (next try in {HEARTBEAT_RETRY_SECONDS // 60} min)", Fore.YELLOW)
 
 def upload_database():
     """Upload the database to the web server (non-fatal).
@@ -1124,11 +1146,11 @@ def main():
                     if result:
                         stations_data[station_name] = (result[0], result[1], 'playlist24.nl')
             
-            monitored_stations = len(set(RELISTEN_STATIONS) | set(ALL_MYONLINERADIO_STATIONS) | set(ALL_PLAYLIST24_STATIONS))
+            monitored_names = set(RELISTEN_STATIONS) | set(ALL_MYONLINERADIO_STATIONS) | set(ALL_PLAYLIST24_STATIONS)
 
             if not stations_data:
                 log_print(f"Warning: No station data retrieved from any source", Fore.RED)
-                send_heartbeat(0, monitored_stations)
+                send_heartbeat(0, monitored_names)
                 time.sleep(60)
                 continue
             
@@ -1156,6 +1178,17 @@ def main():
 
                     # Create a unique key to detect if this is the same song (handles ordering issues)
                     song_key = create_song_key(artist, song)
+
+                    # Remember what is on air for the website's nu.php (highlight = Phil Collins/Genesis
+                    # and target songs, not the side-project songs: song.php has nothing for those)
+                    now_ts = time.time()
+                    state = station_state.get(station)
+                    if state is None or state['key'] != song_key:
+                        state = {'key': song_key, 'since': now_ts}
+                    state.update(artist=normalized_artist, song=normalized_song, source=source, seen=now_ts,
+                                 highlight=matches_target(normalized_artist, normalized_song)
+                                 and not matches_song_list(TRACKED_SONGS, normalized_artist, normalized_song))
+                    station_state[station] = state
 
                     # Check if this is different from last known song (using song key)
                     if station not in last_songs or last_songs[station] != song_key:
@@ -1232,7 +1265,7 @@ def main():
             # Catch the website up if an earlier upload failed
             retry_pending_upload()
 
-            send_heartbeat(len(stations_data), monitored_stations)
+            send_heartbeat(len(stations_data), monitored_names)
 
             # Wait 60 seconds before next check
             log_print("-" * 60, Fore.CYAN)
